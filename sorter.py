@@ -37,13 +37,15 @@ if __name__ == '__main__':
     import json
     import random
     import timeit
-    import numpy
     import os.path
+    import numpy
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
 
 
+    data_switch = {}
     switch = {}
     sort_switch = {}
-    data_switch = {}
 
 
     def addtoswitch(func, name=None, target=switch):
@@ -54,8 +56,28 @@ if __name__ == '__main__':
             target[func.__name__] = func
 
 
-    def asc(l, s, e):
-        pass
+    def ascending(arr):
+        return sorted(arr)
+
+
+    def descending(arr):
+        return sorted(arr)[::-1]
+
+
+    def randomized(arr):
+        return arr
+
+
+    def constant(arr):
+        current = random.choice(arr)
+        arr = [current for i in range(len(arr))]
+        return arr
+
+
+    def A_shaped(arr):
+        arr = sorted(arr)
+        current = random.randint(0, len(arr))
+        return arr[:current:]+ arr[current::][::-1]
 
 
     def save(key, value):
@@ -240,7 +262,7 @@ if __name__ == '__main__':
     def gendata(*args):
         """
         =======
-        gendata
+        gendata type
         =======
 
         Generates data based on the settings from save.json file, and saves it in 'data.json'.
@@ -250,15 +272,19 @@ if __name__ == '__main__':
         else:
             with open('save.json', 'r') as source:
                 settings = json.load(source)
-            data = []
+            data = {}
             random.seed(settings['seed'])
-            for i in range(10):
-                data.append([])
-                for j in range(settings['n']):
-                    current = [random.randint(settings['s'], settings['e']) for _ in
-                               range(settings['l'] + settings['d'] * i)]
-                    data[i].append(current)
-            data.append(settings)
+            for kind in data_switch:
+                data[kind] = []
+                for i in range(10):
+                    block = []
+                    for j in range(settings['n']):
+                        current = [random.randint(settings['s'], settings['e']) for _ in
+                                   range(settings['l'] + settings['d'] * i)]
+                        current = data_switch[kind](current)
+                        block.append(current)
+                    data[kind].append(block)
+            data['settings'] = settings
             with open('data.json', 'w') as target:
                 json.dump(data, target)
             print('Data generated successfully.')
@@ -279,24 +305,55 @@ if __name__ == '__main__':
         else:
             with open('data.json', 'r') as source:
                 data = json.load(source)
-            settings = data.pop()
+            settings = data['settings']
             result = {}
             for algorythm in sort_switch:
-                result[algorythm] = []
-                for i in range(10):
-                    average = 0
-                    for arr in data[i]:
-                        charray = f"from __main__ import {algorythm} as func; arr = {str(arr)}"
-                        current = timeit.timeit(stmt='func(arr)', setup=charray, number=3)
-                        average += current
-                    average /= settings['n']
-                    result[algorythm].append(average)
-            result = [result, settings]
+                result[algorythm] = {}
+                for kind in data_switch:
+                    result[algorythm][kind] = []
+                    for i in range(10):
+                        average = 0
+                        for arr in data[kind][i]:
+                            charray = f"from __main__ import {algorythm} as func; arr = {str(arr)}"
+                            current = timeit.timeit(stmt='func(arr)', setup=charray, number=1)
+                            average += current
+                        average /= settings['n']
+                        result[algorythm][kind].append(average)
+            result['settings'] = settings
             with open('processed_data.json', 'w') as target:
                 json.dump(result, target)
             print('Data processed successfully')
 
 
+    def plotdata(*args):
+        if len(args):
+            print('Too many arguments were given.')
+        elif not os.path.isfile('processed_data.json'):
+            print('No data found. Use processdata command first.')
+        else:
+            with open('processed_data.json', 'r') as source:
+                data = json.load(source)
+            settings = data['settings']
+            x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 9, settings['d'])
+            for algorythm in sort_switch:
+                for kind in data_switch:
+                    y = numpy.asarray(data[algorythm][kind])
+                    plt.plot(x, y,  label=kind)
+                plt.title(algorythm)
+                plt.legend()
+                plt.xlabel('Lenght of the test case')
+                plt.ylabel('Time [s]')
+                plt.grid(True)
+                plt.savefig(f'{algorythm}.png')
+                plt.clf()
+        print('Plotting done successfully')
+
+
+    addtoswitch(ascending, target=data_switch)
+    addtoswitch(descending, target=data_switch)
+    addtoswitch(randomized, target=data_switch)
+    addtoswitch(constant, target=data_switch)
+    addtoswitch(A_shaped, target=data_switch)
     addtoswitch(insertionsort, target=sort_switch)
     addtoswitch(bubblesort, target=sort_switch)
     addtoswitch(selectionsort, target=sort_switch)
@@ -314,6 +371,7 @@ if __name__ == '__main__':
     addtoswitch(restore)
     addtoswitch(gendata)
     addtoswitch(processdata)
+    addtoswitch(plotdata)
 
 
     if not os.path.isfile('save.json'):
