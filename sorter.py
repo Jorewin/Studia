@@ -1,3 +1,26 @@
+# Print iterations progress
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = printEnd)
+    # Print New Line on Complete
+    if iteration == total:
+        print()
+
+
 def insertionsort(arr):
     for i in range(len(arr)):
         current = arr.pop(i)
@@ -7,7 +30,7 @@ def insertionsort(arr):
                 break
         else:
             arr.insert(i, current)
-    return arr
+    return
 
 
 def bubblesort(arr):
@@ -19,17 +42,105 @@ def bubblesort(arr):
                 done = False
         if done:
             return arr
-    return arr
+    return
 
 
 def selectionsort(arr):
     for i in range(len(arr)):
         current = min(range(i, len(arr)), key=lambda key: arr[key])
         arr[i], arr[current] = arr[current], arr[i]
-    return arr
+    return
 
 
-def quicksort(arr):
+def right_quicksort(arr, start=0, stop=None):
+    if stop == None:
+        stop = len(arr) - 1
+    if (stop - start + 1) < 2:
+        return
+    else:
+        p = start
+        for i in range(start, stop):
+            if arr[i] < arr[stop]:
+                arr[p], arr[i] = arr[i], arr[p]
+                p += 1
+        arr[stop], arr[p] = arr[p], arr[stop]
+        right_quicksort(arr, start= start, stop=p-1)
+        right_quicksort(arr, start=p+1, stop=stop)
+        return
+
+
+def random_quicksort(arr, start=0, stop=None):
+    if stop == None:
+        stop = len(arr) - 1
+    if (stop - start + 1) < 2:
+        return
+    else:
+        p = random.randint(start, stop)
+        arr[stop], arr[p] = arr[p], arr[stop]
+        p = start
+        for i in range(start, stop):
+            if arr[i] < arr[stop]:
+                arr[p], arr[i] = arr[i], arr[p]
+                p += 1
+        arr[stop], arr[p] = arr[p], arr[stop]
+        random_quicksort(arr, start= start, stop=p-1)
+        random_quicksort(arr, start=p+1, stop=stop)
+        return
+
+
+def mergesort(arr, start=0, stop=None):
+    if stop == None:
+        stop = len(arr) - 1
+    if (stop - start + 1) > 1:
+        p = (start + stop) // 2
+        mergesort(arr, start=start, stop=p)
+        mergesort(arr, start=p+1, stop=stop)
+        print(f'p = {p} left = {arr[start:p]} right = {arr[p:stop+1]}', end='')
+        i, j = start, p+1
+        while i <= p and j <= stop:
+            if arr[j] <= arr[i]:
+                current = arr.pop(j)
+                arr.insert(i, current)
+                j += 1
+            else:
+                i += 1
+        print(f' sorted = {arr[start:stop+1]}')
+    return
+
+
+def heapmove(arr, p, i):
+    while True:
+        son = (p * 2 + 1)
+        daughter = (p * 2 + 2)
+        if daughter <= i:
+            lower = max(son, daughter, key=lambda key: arr[key])
+            if arr[p] < arr[lower]:
+                arr[p], arr[lower] = arr[lower], arr[p]
+                p = lower
+            else:
+                break
+        elif son <= i:
+            if arr[p] < arr[son]:
+                arr[p], arr[son] = arr[son], arr[p]
+                p = son
+            else:
+                break
+        else:
+            break
+
+
+def heapsort(arr):
+    for i in range(len(arr)):
+        p = arr.pop(i)
+        arr.insert(0, p)
+        heapmove(arr, 0, i)
+    for i in range(len(arr)-1, -1, -1):
+        arr[0], arr[i] = arr[i], arr[0]
+        heapmove(arr, 0, i-1)
+    return
+
+
+def countingsort(arr):
     pass
 
 
@@ -40,7 +151,7 @@ if __name__ == '__main__':
     import os.path
     import numpy
     import matplotlib.pyplot as plt
-    import matplotlib as mpl
+    import sys
 
 
     data_switch = {}
@@ -50,7 +161,7 @@ if __name__ == '__main__':
 
     def addtoswitch(func, name=None, target=switch):
         """Internal function that makes the terminal work"""
-        if name and isinstance(name, str):
+        if isinstance(name, str):
             target[name] = func
         else:
             target[func.__name__] = func
@@ -106,9 +217,9 @@ if __name__ == '__main__':
         command_name: name of the command
 
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
-        elif func := switch.get(name):
+        elif (func := switch.get(name)) != None:
             print(func.__doc__)
         else:
             print(f'{name} is not a defined command.')
@@ -122,7 +233,7 @@ if __name__ == '__main__':
 
         Shows the list o available commands.
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         else:
             print('Available commands:')
@@ -143,7 +254,7 @@ if __name__ == '__main__':
         sort_algorythm: one of the available algorythms name
         arr: set of int with base 10 seperated with spaces
         """
-        if not (func := sort_switch.get(name)):
+        if (func := sort_switch.get(name)) == None:
             print(f'{name} is not an available sort algorythm')
         else:
             try:
@@ -151,7 +262,8 @@ if __name__ == '__main__':
             except ValueError:
                 print(f'Array should be composed of integers with base 10 only.')
             else:
-                print(func(arr))
+                func(arr)
+                print(arr)
 
 
     def sayhi(*args):
@@ -161,7 +273,7 @@ if __name__ == '__main__':
 
         Says hi
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         else:
             print('hi')
@@ -185,7 +297,7 @@ if __name__ == '__main__':
                 + seed
         value: int with base 10 which will be assigned to the chosen key
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         else:
             try:
@@ -207,7 +319,7 @@ if __name__ == '__main__':
         Arguments:
         lenght: lenght of the seed default = 1
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         else:
             try:
@@ -229,7 +341,7 @@ if __name__ == '__main__':
         ======
 
         Backs up the settings."""
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         else:
             with open('save.json', 'r') as source:
@@ -247,7 +359,7 @@ if __name__ == '__main__':
 
         Restores settings from backup.json
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         elif not os.path.isfile('backup.json'):
             print('There is no backup to restore.')
@@ -267,13 +379,16 @@ if __name__ == '__main__':
 
         Generates data based on the settings from save.json file, and saves it in 'data.json'.
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         else:
             with open('save.json', 'r') as source:
                 settings = json.load(source)
             data = {}
             random.seed(settings['seed'])
+            total = len(data_switch) * 10 * settings['n']
+            iteration = 0
+            printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
             for kind in data_switch:
                 data[kind] = []
                 for i in range(10):
@@ -283,6 +398,8 @@ if __name__ == '__main__':
                                    range(settings['l'] + settings['d'] * i)]
                         current = data_switch[kind](current)
                         block.append(current)
+                        iteration += 1
+                        printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
                     data[kind].append(block)
             data['settings'] = settings
             with open('data.json', 'w') as target:
@@ -298,7 +415,7 @@ if __name__ == '__main__':
 
         Tests defined algorythms using data from 'data.json', results are saved in 'processed_data.json'.
         """
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         elif not os.path.isfile('data.json'):
             print('No data found. Use gendata command first.')
@@ -307,6 +424,9 @@ if __name__ == '__main__':
                 data = json.load(source)
             settings = data['settings']
             result = {}
+            total = len(data_switch) * len(sort_switch) * 10 * settings['n']
+            iteration = 0
+            printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
             for algorythm in sort_switch:
                 result[algorythm] = {}
                 for kind in data_switch:
@@ -317,6 +437,8 @@ if __name__ == '__main__':
                             charray = f"from __main__ import {algorythm} as func; arr = {str(arr)}"
                             current = timeit.timeit(stmt='func(arr)', setup=charray, number=1)
                             average += current
+                            iteration += 1
+                            printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
                         average /= settings['n']
                         result[algorythm][kind].append(average)
             result['settings'] = settings
@@ -326,7 +448,7 @@ if __name__ == '__main__':
 
 
     def plotdata(*args):
-        if len(args):
+        if len(args) != 0:
             print('Too many arguments were given.')
         elif not os.path.isfile('processed_data.json'):
             print('No data found. Use processdata command first.')
@@ -357,7 +479,10 @@ if __name__ == '__main__':
     addtoswitch(insertionsort, target=sort_switch)
     addtoswitch(bubblesort, target=sort_switch)
     addtoswitch(selectionsort, target=sort_switch)
-    # addtoswitch(quicksort, target=sort_switch)
+    addtoswitch(right_quicksort, target=sort_switch)
+    addtoswitch(random_quicksort, target=sort_switch)
+    addtoswitch(mergesort, target=sort_switch)
+    addtoswitch(heapsort, target=sort_switch)
     addtoswitch(myhelp, name='help')
     addtoswitch(mylist, name='list')
     mysort.__doc__ += '\n\t\tAvailable algorythms:'
