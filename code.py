@@ -21,153 +21,27 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         print()
 
 
-def insertionsort(arr):
-    for i in range(len(arr)):
-        current = arr.pop(i)
-        for j in range(i):
-            if current < arr[j]:
-                arr.insert(j, current)
-                break
-        else:
-            arr.insert(i, current)
-    return
-
-
-def bubblesort(arr):
-    for i in range(len(arr) - 1, -1, -1):
-        done = True
-        for j in range(i):
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-                done = False
-        if done:
-            return arr
-    return
-
-
-def selectionsort(arr):
-    for i in range(len(arr)):
-        current = min(range(i, len(arr)), key=lambda key: arr[key])
-        arr[i], arr[current] = arr[current], arr[i]
-    return
-
-
-def right_quicksort(arr, start=0, stop=None):
-    if stop == None:
-        stop = len(arr) - 1
-    if (stop - start + 1) < 2:
-        return
-    else:
-        p = start
-        for i in range(start, stop):
-            if arr[i] < arr[stop]:
-                arr[p], arr[i] = arr[i], arr[p]
-                p += 1
-        arr[stop], arr[p] = arr[p], arr[stop]
-        right_quicksort(arr, start= start, stop=p-1)
-        right_quicksort(arr, start=p+1, stop=stop)
-        return
-
-
-def random_quicksort(arr, start=0, stop=None):
-    if stop == None:
-        stop = len(arr) - 1
-    if (stop - start + 1) < 2:
-        return
-    else:
-        p = random.randint(start, stop)
-        arr[stop], arr[p] = arr[p], arr[stop]
-        p = start
-        for i in range(start, stop):
-            if arr[i] < arr[stop]:
-                arr[p], arr[i] = arr[i], arr[p]
-                p += 1
-        arr[stop], arr[p] = arr[p], arr[stop]
-        random_quicksort(arr, start= start, stop=p-1)
-        random_quicksort(arr, start=p+1, stop=stop)
-        return
-
-
-def mergesort(arr, start=0, stop=None):
-    if stop == None:
-        stop = len(arr) - 1
-    if (stop - start + 1) > 1:
-        p = (start + stop) // 2
-        mergesort(arr, start=start, stop=p)
-        mergesort(arr, start=p+1, stop=stop)
-        i, j = start, p+1
-        while i <= p and j <= stop:
-            if arr[j] <= arr[i]:
-                current = arr.pop(j)
-                arr.insert(i, current)
-                p += 1
-                j += 1
-            i += 1
-    return
-
-
-def heapmove(arr, p, i):
-    while True:
-        son = (p * 2 + 1)
-        daughter = (p * 2 + 2)
-        if daughter <= i:
-            lower = max(son, daughter, key=lambda key: arr[key])
-            if arr[p] < arr[lower]:
-                arr[p], arr[lower] = arr[lower], arr[p]
-                p = lower
-            else:
-                break
-        elif son <= i:
-            if arr[p] < arr[son]:
-                arr[p], arr[son] = arr[son], arr[p]
-                p = son
-            else:
-                break
-        else:
-            break
-
-
-def heapsort(arr):
-    for i in range(len(arr)):
-        p = arr.pop(i)
-        arr.insert(0, p)
-        heapmove(arr, 0, i)
-    for i in range(len(arr)-1, -1, -1):
-        arr[0], arr[i] = arr[i], arr[0]
-        heapmove(arr, 0, i-1)
-    return
-
-
-def countingsort(arr):
-    start = min(min(arr), 0) - 1
-    stop = max(arr)
-    lenght = stop - start + 1
-    count = [0 for _ in range(lenght)]
-    for number in arr:
-        count[number] += 1
-    for i in range(start + 1, stop + 1):
-        count[i] += count[i-1]
-        p = count[i]
-        while p > count[i-1]:
-            arr[p-1] = i
-            p -= 1
-    return
-
-
 if __name__ == '__main__':
+    import sys
     import json
     import random
     import timeit
     import os.path
     import numpy
     import matplotlib.pyplot as plt
-    import sys
-
+    if os.path.isfile('sorts.py'):
+        import sorts
+    else:
+        print('File including sorting algorythms was not detected.')
+        sys.exit()
+    if sys.version_info < (3, 8):
+        print('Please use Python 3.8 or higher')
+        sys.exit()
 
     data_switch = {}
     switch = {}
     sort_switch = {}
-
+    sys.setrecursionlimit(10**6)
 
     def addtoswitch(func, name=None, target=switch):
         """Internal function that makes the terminal work"""
@@ -203,23 +77,38 @@ if __name__ == '__main__':
 
     def save(key, value):
         """Internal save function"""
-        source = open('save.json', 'r')
+        source = open('settings.json', 'r')
         settings = json.load(source)
         source.close()
         if key in settings:
             settings[key] = value
-            with open('save.json', 'w') as target:
+            with open('settings.json', 'w') as target:
                 json.dump(settings, target)
             print('Setting saved successfully.')
         else:
             print(f'{key} is not a defined setting.')
 
 
+    def myexit(*args):
+        """
+        ====
+        exit
+        ====
+        
+        Terminates the process.
+        """
+        if len(args) != 0:
+            print('Too many arguments were given')
+        else:
+            print('Process terminated')
+            sys.exit()
+        
+        
     def myhelp(name=None, *args):
         """
-        ==============
+        =================
         help command_name
-        ==============
+        =================
 
         Shows documentation of chosen command.
 
@@ -272,7 +161,7 @@ if __name__ == '__main__':
             except ValueError:
                 print(f'Array should be composed of integers with base 10 only.')
             else:
-                func(arr)
+                func(arr, 0, len(arr) - 1)
                 print(arr)
 
 
@@ -287,6 +176,24 @@ if __name__ == '__main__':
             print('Too many arguments were given.')
         else:
             print('hi')
+
+    
+    def current_settings(*args):
+        """
+        ========
+        settings
+        ========
+
+        Shows settings stored in 'settings.json'.
+        """
+        if len(args) != 0:
+            print('Too many arguments were given')
+        else:
+            with open('settings.json', 'r') as source:
+                settings = json.load(source)
+            print('Current settings:')
+            for setting in settings:
+                print(f'\t{setting} -> {settings[setting]}')
 
 
     def myset(key=None, value=0, *args):
@@ -354,7 +261,7 @@ if __name__ == '__main__':
         if len(args) != 0:
             print('Too many arguments were given.')
         else:
-            with open('save.json', 'r') as source:
+            with open('settings.json', 'r') as source:
                 data = json.load(source)
             with open('backup.json', 'w') as target:
                 json.dump(data, target)
@@ -376,7 +283,7 @@ if __name__ == '__main__':
         else:
             with open('backup.json', 'r') as source:
                 data = json.load(source)
-            with open('save.json', 'w') as target:
+            with open('settings.json', 'w') as target:
                 json.dump(data, target)
             print('Data restored successfully.')
 
@@ -387,12 +294,12 @@ if __name__ == '__main__':
         gendata type
         =======
 
-        Generates data based on the settings from save.json file, and saves it in 'data.json'.
+        Generates data based on the settings from 'settings.json' file, and saves it in 'data.json'.
         """
         if len(args) != 0:
             print('Too many arguments were given.')
         else:
-            with open('save.json', 'r') as source:
+            with open('settings.json', 'r') as source:
                 settings = json.load(source)
             data = {}
             random.seed(settings['seed'])
@@ -417,7 +324,7 @@ if __name__ == '__main__':
             print('Data generated successfully.')
 
 
-    def processdata(*args):
+    def processdata2(*args):
         """
         ===========
         processdata
@@ -444,8 +351,8 @@ if __name__ == '__main__':
                     for i in range(10):
                         average = 0
                         for arr in data[kind][i]:
-                            stmt = 'setrecursionlimit(10**6)\nfunc(arr)'
-                            setup = f"from __main__ import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}"
+                            stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
+                            setup = f"from sorts import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}; stop = {len(arr) - 1}"
                             current = timeit.timeit(stmt=stmt, setup=setup, number=1)
                             average += current
                             iteration += 1
@@ -458,63 +365,120 @@ if __name__ == '__main__':
             print('Data processed successfully')
 
 
+    def processdata(name=None, *args):
+        """
+        ==========================
+        processdata [sort_algorythm]
+        ==========================
+
+        Tests defined algorythms using data from 'data.json', results are saved in 'processed_data.json'.
+
+        Arguments:
+        sort_algorythm (optional): one of the available algorythms name
+        """
+        if len(args) != 0:
+            print('Too many arguments were given.')
+        elif not os.path.isfile('data.json'):
+            print('No data found. Use gendata command first.')
+        else:
+            if name != None:
+                if sort_switch.get(name) != None:
+                    algorythms = {name: sort_switch[name]}
+                else:
+                    print(f'{name} is not an available sorting algorythm')
+                    return
+            else:
+                algorythms = sort_switch
+            with open('data.json', 'r') as source:
+                data = json.load(source)
+            settings = data['settings']
+            total = len(data_switch) * len(algorythms) * 10 * settings['n']
+            iteration = 0
+            printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
+            for algorythm in algorythms:
+                result = {}
+                for kind in data_switch:
+                    result[kind] = []
+                    for i in range(10):
+                        average = 0
+                        for arr in data[kind][i]:
+                            stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
+                            setup = f"from sorts import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}; stop = {len(arr) - 1}"
+                            current = timeit.timeit(stmt=stmt, setup=setup, number=1)
+                            average += current
+                            iteration += 1
+                            printProgressBar(iteration, total, prefix=f'Progress: [{algorythm}]', suffix='Complete', length=50)
+                        average /= settings['n']
+                        result[kind].append(average)
+                result['settings'] = settings
+                with open(f'processed_data/{algorythm}.json', 'w') as target:
+                    json.dump(result, target)
+            print('Data processed successfully')
+
+
     def plotdata(*args):
         if len(args) != 0:
             print('Too many arguments were given.')
-        elif not os.path.isfile('processed_data.json'):
-            print('No data found. Use processdata command first.')
         else:
-            with open('processed_data.json', 'r') as source:
-                data = json.load(source)
-            settings = data['settings']
-            x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 9, settings['d'])
             for algorythm in sort_switch:
+                if not os.path.isfile(f'processed_data/{algorythm}.json'):
+                    continue
+                with open(f'processed_data/{algorythm}.json', 'r') as source:
+                    data = json.load(source)
+                settings = data['settings']
+                x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
                 for kind in data_switch:
-                    y = numpy.asarray(data[algorythm][kind])
-                    plt.plot(x, y,  label=kind)
+                    y = numpy.asarray(data[kind])
+                    plt.plot(x, y, label=kind)
                 plt.title(algorythm)
                 plt.legend()
                 plt.xlabel('Lenght of the test case')
                 plt.ylabel('Time [s]')
                 plt.grid(True)
-                plt.savefig(f'{algorythm}.png')
+                plt.savefig(f'figures/{algorythm}.png')
                 plt.clf()
         print('Plotting done successfully')
 
 
-    addtoswitch(ascending, target=data_switch)
-    addtoswitch(descending, target=data_switch)
-    addtoswitch(randomized, target=data_switch)
-    addtoswitch(constant, target=data_switch)
-    addtoswitch(A_shaped, target=data_switch)
-    addtoswitch(insertionsort, target=sort_switch)
-    addtoswitch(bubblesort, target=sort_switch)
-    addtoswitch(selectionsort, target=sort_switch)
-    addtoswitch(right_quicksort, target=sort_switch)
-    addtoswitch(random_quicksort, target=sort_switch)
-    addtoswitch(mergesort, target=sort_switch)
-    addtoswitch(heapsort, target=sort_switch)
-    addtoswitch(countingsort, target=sort_switch)
-    addtoswitch(myhelp, name='help')
-    addtoswitch(mylist, name='list')
-    mysort.__doc__ += '\n\t\tAvailable algorythms:'
-    for algorythm in sort_switch:
-        mysort.__doc__ += ('\n\t\t\t+' + algorythm)
-    addtoswitch(mysort, name='sort')
-    addtoswitch(sayhi)
-    addtoswitch(myset, name="set")
-    addtoswitch(genseed)
-    addtoswitch(backup)
-    addtoswitch(restore)
-    addtoswitch(gendata)
-    addtoswitch(processdata)
-    addtoswitch(plotdata)
+    def createswicthes():
+        addtoswitch(ascending, target=data_switch)
+        addtoswitch(descending, target=data_switch)
+        addtoswitch(randomized, target=data_switch)
+        addtoswitch(constant, target=data_switch)
+        addtoswitch(A_shaped, target=data_switch)
+        addtoswitch(sorts.insertionsort, target=sort_switch)
+        addtoswitch(sorts.bubblesort, target=sort_switch)
+        addtoswitch(sorts.selectionsort, target=sort_switch)
+        addtoswitch(sorts.right_quicksort, target=sort_switch)
+        addtoswitch(sorts.random_quicksort, target=sort_switch)
+        addtoswitch(sorts.mergesort, target=sort_switch)
+        addtoswitch(sorts.heapsort, target=sort_switch)
+        addtoswitch(sorts.countingsort, target=sort_switch)
+        addtoswitch(myexit, name='exit')
+        addtoswitch(myhelp, name='help')
+        addtoswitch(mylist, name='list')
+        mysort.__doc__ += '\n\t\tAvailable algorythms:'
+        processdata.__doc__ += '\n\t\tAvailable algorythms:'
+        for algorythm in sort_switch:
+            mysort.__doc__ += ('\n\t\t\t+' + algorythm)
+            processdata.__doc__ += ('\n\t\t\t+' + algorythm)
+        addtoswitch(mysort, name='sort')
+        addtoswitch(sayhi)
+        addtoswitch(current_settings)
+        addtoswitch(myset, name="set")
+        addtoswitch(genseed)
+        addtoswitch(backup)
+        addtoswitch(restore)
+        addtoswitch(gendata)
+        addtoswitch(processdata)
+        addtoswitch(plotdata)
 
 
-    if not os.path.isfile('save.json'):
-        with open('save.json', 'w') as target:
-            json.dump({'n': 10, 'l': 50, 'd': 50, 's': 1, 'e': 100, 'seed': 9}, target)
+    if not os.path.isfile('settings.json'):
+        with open('settings.json', 'w') as target:
+            json.dump({'n': 10, 'l': 6000, 'd': 6000, 's': 1, 'e': 60000, 'seed': 736784978}, target)
     print('Sorter by Jakub Błażejowski', 'Type list to get list of available commands.', sep='\n')
+    createswicthes()
     while True:
         print('>>', end=' ')
         data = input().split()
@@ -523,10 +487,7 @@ if __name__ == '__main__':
         if not data:
             continue
         command, *arguments = data
-        if command == 'exit':
-            print('Process terminated')
-            break
-        elif func := switch.get(command):
+        if func := switch.get(command):
             func(*arguments)
         else:
             print(f'{command} is not a defined command')
