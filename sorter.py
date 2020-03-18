@@ -95,16 +95,14 @@ def mergesort(arr, start=0, stop=None):
         p = (start + stop) // 2
         mergesort(arr, start=start, stop=p)
         mergesort(arr, start=p+1, stop=stop)
-        print(f'p = {p} left = {arr[start:p]} right = {arr[p:stop+1]}', end='')
         i, j = start, p+1
         while i <= p and j <= stop:
             if arr[j] <= arr[i]:
                 current = arr.pop(j)
                 arr.insert(i, current)
+                p += 1
                 j += 1
-            else:
-                i += 1
-        print(f' sorted = {arr[start:stop+1]}')
+            i += 1
     return
 
 
@@ -141,7 +139,19 @@ def heapsort(arr):
 
 
 def countingsort(arr):
-    pass
+    start = min(min(arr), 0) - 1
+    stop = max(arr)
+    lenght = stop - start + 1
+    count = [0 for _ in range(lenght)]
+    for number in arr:
+        count[number] += 1
+    for i in range(start + 1, stop + 1):
+        count[i] += count[i-1]
+        p = count[i]
+        while p > count[i-1]:
+            arr[p-1] = i
+            p -= 1
+    return
 
 
 if __name__ == '__main__':
@@ -434,8 +444,9 @@ if __name__ == '__main__':
                     for i in range(10):
                         average = 0
                         for arr in data[kind][i]:
-                            charray = f"from __main__ import {algorythm} as func; arr = {str(arr)}"
-                            current = timeit.timeit(stmt='func(arr)', setup=charray, number=1)
+                            stmt = 'setrecursionlimit(10**6)\nfunc(arr)'
+                            setup = f"from __main__ import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}"
+                            current = timeit.timeit(stmt=stmt, setup=setup, number=1)
                             average += current
                             iteration += 1
                             printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
@@ -483,6 +494,7 @@ if __name__ == '__main__':
     addtoswitch(random_quicksort, target=sort_switch)
     addtoswitch(mergesort, target=sort_switch)
     addtoswitch(heapsort, target=sort_switch)
+    addtoswitch(countingsort, target=sort_switch)
     addtoswitch(myhelp, name='help')
     addtoswitch(mylist, name='list')
     mysort.__doc__ += '\n\t\tAvailable algorythms:'
