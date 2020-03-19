@@ -180,7 +180,7 @@ if __name__ == '__main__':
             print('hi')
 
     
-    def current_settings(*args):
+    def currentsettings(*args):
         """
         ========
         settings
@@ -290,24 +290,41 @@ if __name__ == '__main__':
             print('Data restored successfully.')
 
 
-    def gendata(*args):
+    def gendata(name=None, *args):
         """
-        =======
-        gendata
-        =======
+        ============
+        gendata type
+        ============
 
-        Generates data based on the settings from 'settings.json' file, and saves it in 'data.json'.
+        Generates data.
+
+        Arguments:
+        type (optional): one of available types of data to be regenerated
         """
         if len(args) != 0:
             print('Too many arguments were given.')
         else:
-            with open('settings.json', 'r') as source:
-                settings = json.load(source)
+            if name != None:
+                if data_switch.get(name) != None:
+                    kinds = {name: data_switch[name]}
+                else:
+                    print(f'{name} is not an available data type')
+                    return
+                if os.path.isfile('data/settings.json'):
+                   with open('data/settings.json', 'r') as source:
+                       settings = json.load(source)
+                else:
+                   print('To regenerate type of data you have to generate all data first')
+                   return
+            else:
+                kinds = data_switch
+                with open('settings.json', 'r') as source:
+                    settings = json.load(source)
             random.seed(settings['seed'])
-            total = len(data_switch) * 10 * settings['n']
+            total = len(kinds) * 10 * settings['n']
             iteration = 0
             printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
-            for kind in data_switch:
+            for kind in kinds:
                 data = []
                 for i in range(10):
                     for j in range(settings['n']):
@@ -366,13 +383,13 @@ if __name__ == '__main__':
             print('Data processed successfully')
 
 
-    def processdata(name=None, *args):
+    def processbyalgorythm(name=None, *args):
         """
-        ============================
-        processdata [sort_algorythm]
-        ============================
+        ===================================
+        processbyalgorythm [sort_algorythm]
+        ===================================
 
-        Tests defined algorythms using data from 'data.json', results are saved in 'processed_data.json'.
+        Tests defined algorythms.
 
         Arguments:
         sort_algorythm (optional): one of the available algorythms name
@@ -401,7 +418,7 @@ if __name__ == '__main__':
                 for kind in data_switch:
                     data = numpy.load(f'data/{kind}.npy', allow_pickle=True)
                     result = numpy.zeros(10)
-                    for i in range(10):
+                    for i in range(-1, 10):
                         average = 0
                         for j in range(settings['n']):
                             # stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
@@ -418,12 +435,75 @@ if __name__ == '__main__':
                         result[i] = average
 
                     numpy.savetxt(f'processed_data/{algorythm}/{kind}.csv', result, delimiter=',')
+                with open(f'processed_data/{algorythm}/settings.json', 'w') as target:
+                    json.dump(settings, target)
+            print('Data processed successfully')
+
+
+    def processbytype(name=None, *args):
+        """
+        ============================
+        processbytype [type]
+        ============================
+
+        Tests defined algorythms.
+
+        Arguments:
+        type (optional): one of the available types
+        """
+        if len(args) != 0:
+            print('Too many arguments were given.')
+        elif not os.path.isfile('data/settings.json'):
+            print('No data found. Use gendata command first.')
+        else:
+            if name != None:
+                if data_switch.get(name) != None:
+                    kinds = {name: data_switch[name]}
+                else:
+                    print(f'{name} is not an available data type')
+                    return
+            else:
+                kinds = data_switch
+            with open('data/settings.json', 'r') as source:
+                settings = json.load(source)
+            total = len(kinds) * len(sort_switch) * 10 * settings['n']
+            iteration = 0
+            printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
+            for kind in kinds:
+                for algorythm in sort_switch:
+                    if not os.path.isdir(f'processed_data/{algorythm}'):
+                        os.mkdir(f'processed_data/{algorythm}')
+                    data = numpy.load(f'data/{kind}.npy', allow_pickle=True)
+                    result = numpy.zeros(10)
+                    for i in range(-1, 10):
+                        average = 0
+                        for j in range(settings['n']):
+                            # stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
+                            #setup = f"from sorts import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}; stop = {len(arr) - 1}"
+                            # current = timeit.timeit(stmt=stmt, setup=setup, number=1)
+                            data[i+j] = numpy.asarray(data[i+j])
+                            def func():
+                                sort_switch[algorythm](data[i+j], 0, data[i+j].size - 1)
+                            current = timeit.timeit(func, number=1)
+                            average += current
+                            iteration += 1
+                            printProgressBar(iteration, total, prefix=f'Progress: ', suffix='Complete', length=50)
+                        average /= settings['n']
+                        result[i] = average
+                    numpy.savetxt(f'processed_data/{algorythm}/{kind}.csv', result, delimiter=',')
                     with open(f'processed_data/{algorythm}/settings.json', 'w') as target:
                         json.dump(settings, target)
             print('Data processed successfully')
 
 
     def plotdata(*args):
+        """
+        ========
+        plotdata
+        ========
+
+        Creates figures.
+        """
         if len(args) != 0:
             print('Too many arguments were given.')
         else:
@@ -435,7 +515,7 @@ if __name__ == '__main__':
                 x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
                 for kind in data_switch:
                     y = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
-                    plt.plot(x, y, label=kind)
+                    plt.plot(x, y, marker='o', label=kind)
                 plt.title(algorythm)
                 plt.legend()
                 plt.xlabel('Lenght of the test case')
@@ -451,7 +531,7 @@ if __name__ == '__main__':
                         settings = json.load(source)
                     x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
                     y = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
-                    plt.plot(x, y, label=algorythm)
+                    plt.plot(x, y, marker='o', label=algorythm)
                 plt.title(kind)
                 plt.legend()
                 plt.xlabel('Lenght of the test case')
@@ -480,19 +560,25 @@ if __name__ == '__main__':
         addtoswitch(myhelp, name='help')
         addtoswitch(mylist, name='list')
         mysort.__doc__ += '\n\t\tAvailable algorythms:'
-        processdata.__doc__ += '\n\t\tAvailable algorythms:'
+        processbyalgorythm.__doc__ += '\n\t\tAvailable algorythms:'
         for algorythm in sort_switch:
             mysort.__doc__ += ('\n\t\t\t+' + algorythm)
-            processdata.__doc__ += ('\n\t\t\t+' + algorythm)
+            processbyalgorythm.__doc__ += ('\n\t\t\t+' + algorythm)
+        processbytype.__doc__ += '\n\t\tAvailable data types:'
+        gendata.__doc__ += '\n\t\tAvailable data types:'
+        for kind in data_switch:
+            processbytype.__doc__ += ('\n\t\t\t+' + kind)
+            gendata.__doc__ += ('\n\t\t\t+' + kind)
         addtoswitch(mysort, name='sort')
         addtoswitch(sayhi)
-        addtoswitch(current_settings)
+        addtoswitch(currentsettings)
         addtoswitch(myset, name="set")
         addtoswitch(genseed)
         addtoswitch(backup)
         addtoswitch(restore)
         addtoswitch(gendata)
-        addtoswitch(processdata)
+        addtoswitch(processbyalgorythm)
+        addtoswitch(processbytype)
         addtoswitch(plotdata)
 
 

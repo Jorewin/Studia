@@ -130,3 +130,5 @@ dmypy.json
 
 *.png
 *.json
+*.csv
+*.npy
