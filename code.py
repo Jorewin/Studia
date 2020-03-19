@@ -26,6 +26,7 @@ if __name__ == '__main__':
     import json
     import random
     import timeit
+    import os
     import os.path
     import numpy
     import matplotlib.pyplot as plt
@@ -161,7 +162,8 @@ if __name__ == '__main__':
             except ValueError:
                 print(f'Array should be composed of integers with base 10 only.')
             else:
-                func(arr, 0, len(arr) - 1)
+                arr = numpy.asarray(arr)
+                func(arr, 0, arr.size - 1)
                 print(arr)
 
 
@@ -291,7 +293,7 @@ if __name__ == '__main__':
     def gendata(*args):
         """
         =======
-        gendata type
+        gendata
         =======
 
         Generates data based on the settings from 'settings.json' file, and saves it in 'data.json'.
@@ -301,26 +303,25 @@ if __name__ == '__main__':
         else:
             with open('settings.json', 'r') as source:
                 settings = json.load(source)
-            data = {}
             random.seed(settings['seed'])
             total = len(data_switch) * 10 * settings['n']
             iteration = 0
             printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
             for kind in data_switch:
-                data[kind] = []
+                data = []
                 for i in range(10):
-                    block = []
                     for j in range(settings['n']):
                         current = [random.randint(settings['s'], settings['e']) for _ in
                                    range(settings['l'] + settings['d'] * i)]
                         current = data_switch[kind](current)
-                        block.append(current)
+                        current = numpy.asarray(current)
+                        data.append(current)
                         iteration += 1
                         printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
-                    data[kind].append(block)
-            data['settings'] = settings
-            with open('data.json', 'w') as target:
-                json.dump(data, target)
+                data = numpy.asarray(data)
+                numpy.save(f'data/{kind}.npy', data)
+            with open('data/settings.json', 'w') as target:
+                json.dump(settings, target)
             print('Data generated successfully.')
 
 
@@ -367,9 +368,9 @@ if __name__ == '__main__':
 
     def processdata(name=None, *args):
         """
-        ==========================
+        ============================
         processdata [sort_algorythm]
-        ==========================
+        ============================
 
         Tests defined algorythms using data from 'data.json', results are saved in 'processed_data.json'.
 
@@ -378,7 +379,7 @@ if __name__ == '__main__':
         """
         if len(args) != 0:
             print('Too many arguments were given.')
-        elif not os.path.isfile('data.json'):
+        elif not os.path.isfile('data/settings.json'):
             print('No data found. Use gendata command first.')
         else:
             if name != None:
@@ -389,30 +390,36 @@ if __name__ == '__main__':
                     return
             else:
                 algorythms = sort_switch
-            with open('data.json', 'r') as source:
-                data = json.load(source)
-            settings = data['settings']
+            with open('data/settings.json', 'r') as source:
+                settings = json.load(source)
             total = len(data_switch) * len(algorythms) * 10 * settings['n']
             iteration = 0
             printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
             for algorythm in algorythms:
-                result = {}
+                if not os.path.isdir(f'processed_data/{algorythm}'):
+                    os.mkdir(f'processed_data/{algorythm}')
                 for kind in data_switch:
-                    result[kind] = []
+                    data = numpy.load(f'data/{kind}.npy', allow_pickle=True)
+                    result = numpy.zeros(10)
                     for i in range(10):
                         average = 0
-                        for arr in data[kind][i]:
-                            stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
-                            setup = f"from sorts import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}; stop = {len(arr) - 1}"
-                            current = timeit.timeit(stmt=stmt, setup=setup, number=1)
+                        for j in range(settings['n']):
+                            # stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
+                            #setup = f"from sorts import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}; stop = {len(arr) - 1}"
+                            # current = timeit.timeit(stmt=stmt, setup=setup, number=1)
+                            data[i+j] = numpy.asarray(data[i+j])
+                            def func():
+                                sort_switch[algorythm](data[i+j], 0, data[i+j].size - 1)
+                            current = timeit.timeit(func, number=1)
                             average += current
                             iteration += 1
-                            printProgressBar(iteration, total, prefix=f'Progress: [{algorythm}]', suffix='Complete', length=50)
+                            printProgressBar(iteration, total, prefix=f'Progress: ', suffix='Complete', length=50)
                         average /= settings['n']
-                        result[kind].append(average)
-                result['settings'] = settings
-                with open(f'processed_data/{algorythm}.json', 'w') as target:
-                    json.dump(result, target)
+                        result[i] = average
+
+                    numpy.savetxt(f'processed_data/{algorythm}/{kind}.csv', result, delimiter=',')
+                    with open(f'processed_data/{algorythm}/settings.json', 'w') as target:
+                        json.dump(settings, target)
             print('Data processed successfully')
 
 
@@ -421,14 +428,13 @@ if __name__ == '__main__':
             print('Too many arguments were given.')
         else:
             for algorythm in sort_switch:
-                if not os.path.isfile(f'processed_data/{algorythm}.json'):
+                if not os.path.isfile(f'processed_data/{algorythm}/settings.json'):
                     continue
-                with open(f'processed_data/{algorythm}.json', 'r') as source:
-                    data = json.load(source)
-                settings = data['settings']
+                with open(f'processed_data/{algorythm}/settings.json', 'r') as source:
+                    settings = json.load(source)
                 x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
                 for kind in data_switch:
-                    y = numpy.asarray(data[kind])
+                    y = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
                     plt.plot(x, y, label=kind)
                 plt.title(algorythm)
                 plt.legend()
@@ -436,6 +442,22 @@ if __name__ == '__main__':
                 plt.ylabel('Time [s]')
                 plt.grid(True)
                 plt.savefig(f'figures/{algorythm}.png')
+                plt.clf()
+            for kind in data_switch:
+                for algorythm in sort_switch:
+                    if not os.path.isfile(f'processed_data/{algorythm}/settings.json'):
+                        continue
+                    with open(f'processed_data/{algorythm}/settings.json', 'r') as source:
+                        settings = json.load(source)
+                    x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
+                    y = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
+                    plt.plot(x, y, label=algorythm)
+                plt.title(kind)
+                plt.legend()
+                plt.xlabel('Lenght of the test case')
+                plt.ylabel('Time [s]')
+                plt.grid(True)
+                plt.savefig(f'figures/{kind}.png')
                 plt.clf()
         print('Plotting done successfully')
 
@@ -477,6 +499,12 @@ if __name__ == '__main__':
     if not os.path.isfile('settings.json'):
         with open('settings.json', 'w') as target:
             json.dump({'n': 10, 'l': 6000, 'd': 6000, 's': 1, 'e': 60000, 'seed': 736784978}, target)
+    if not os.path.isdir('processed_data'):
+        os.mkdir('processed_data')
+    if not os.path.isdir('figures'):
+        os.mkdir('figures')
+    if not os.path.isdir('data'):
+        os.mkdir('data')
     print('Sorter by Jakub Błażejowski', 'Type list to get list of available commands.', sep='\n')
     createswicthes()
     while True:

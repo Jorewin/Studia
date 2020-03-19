@@ -1,15 +1,20 @@
 import random
+import numpy
+import sys
+
+
+sys.setrecursionlimit(10**6)
 
 
 def insertionsort(arr, start, stop):
     for i in range(stop + 1):
-        current = arr.pop(i)
-        for j in range(i):
-            if current < arr[j]:
-                arr.insert(j, current)
+        p = i
+        for j in range(i - 1, -1, -1):
+            if arr[p] < arr[j]:
+                arr[p], arr[j] = arr[j], arr[p]
+                p = j
+            else:
                 break
-        else:
-            arr.insert(i, current)
     return
 
 
@@ -27,8 +32,8 @@ def bubblesort(arr, start, stop):
 
 def selectionsort(arr, start, stop):
     for i in range(stop + 1):
-        current = min(range(i, stop + 1), key=lambda key: arr[key])
-        arr[i], arr[current] = arr[current], arr[i]
+        p = min(range(i, stop + 1), key=lambda key: arr[key])
+        arr[i], arr[p] = arr[p], arr[i]
     return
 
 
@@ -67,16 +72,24 @@ def random_quicksort(arr, start, stop):
 def mergesort(arr, start, stop):
     if (stop - start + 1) > 1:
         p = (start + stop) // 2
-        mergesort(arr, start, p)
-        mergesort(arr, p+1, stop)
-        i, j = start, p+1
+        left, right = numpy.copy(arr[start: p + 1]), numpy.copy(arr[p + 1: stop + 1])
+        stop = right.size - 1
+        mergesort(left, 0, p)
+        mergesort(right, 0, stop)
+        i, j = 0, 0
         while i <= p and j <= stop:
-            if arr[j] <= arr[i]:
-                current = arr.pop(j)
-                arr.insert(i, current)
-                p += 1
+            if right[j] < left[i]:
+                arr[j + i] = right[j]
                 j += 1
-            i += 1
+            else:
+                arr[j + i] = left[i]
+                i += 1
+        if i <= p:
+            for k in range(i, p + 1):
+                arr[j + k] = left[k]
+        if j <= stop:
+            for k in range(j, stop + 1):
+                arr[i + k] = right[k]
     return
 
 
@@ -102,10 +115,8 @@ def heapmove(arr, p, i):
 
 
 def heapsort(arr, start, stop):
-    for i in range(stop + 1):
-        p = arr.pop(i)
-        arr.insert(0, p)
-        heapmove(arr, 0, i)
+    for i in range(stop, -1, -1):
+        heapmove(arr, i, stop)
     for i in range(stop, -1, -1):
         arr[0], arr[i] = arr[i], arr[0]
         heapmove(arr, 0, i-1)
