@@ -23,6 +23,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 
 if __name__ == '__main__':
     import sys
+    import re
     import json
     import random
     import timeit
@@ -383,6 +384,89 @@ if __name__ == '__main__':
             print('Data processed successfully')
 
 
+    def processdata(*args, **kwargs):
+        """
+        ======================================================
+        processdata -s [sort_algorythm] -t [type] -n [number]
+        ======================================================
+
+        Tests defined algorythms.
+
+        Arguments:
+        sort_algorythm (optional): one of the available algorythms name
+        type (optional): one of the available types
+        number (optional): test case number (1 - 10)
+        """
+        if len(args) != 0:
+            print('Too many arguments were given.')
+        elif not os.path.isfile('data/settings.json'):
+            print('No data found. Use gendata command first.')
+        else:
+            if kwargs.get('-s') != None:
+                if sort_switch.get(kwargs['-s']) != None:
+                    algorythms = {kwargs['-s']: sort_switch[kwargs['-s']]}
+                else:
+                    print(f'{kwargs["-s"]} is not an available sorting algorythm')
+                    return
+            else:
+                algorythms = sort_switch
+
+            if kwargs.get('-t') != None:
+                if data_switch.get(kwargs['-t']) != None:
+                    kinds = {kwargs['-t']: data_switch[kwargs['-t']]}
+                else:
+                    print(f'{kwargs["-t"]} is not an available data type')
+                    return
+            else:
+                kinds = data_switch
+
+            if kwargs.get('-n') != None:
+                try:
+                    case = int(kwargs['-n'])
+                except TypeError:
+                    print('Number has to be an integer with base 10.')
+                    return
+                if case <= 10 and case >= 1:
+                    cases = [case - 1]
+                else:
+                    print(f'{case} is not an available case number')
+                    return
+            else:
+                cases = range(9, -1, -1)
+
+            with open('data/settings.json', 'r') as source:
+                settings = json.load(source)
+            total = len(kinds) * len(algorythms) * len(cases) * settings['n']
+            iteration = 0
+            printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
+            for algorythm in algorythms:
+                if not os.path.isdir(f'processed_data/{algorythm}'):
+                    os.mkdir(f'processed_data/{algorythm}')
+                for kind in kinds:
+                    data = numpy.load(f'data/{kind}.npy', allow_pickle=True)
+                    if os.path.isfile(f'processed_data/{algorythm}/{kind}.csv'):
+                        result = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
+                    else:
+                        result = numpy.zeros(10)
+                    for i in cases:
+                        average = 0
+                        for j in range(settings['n']):
+                            def func():
+                                arr = data[i+j]
+                                sort_switch[algorythm](data[i+j], 0, data[i+j].size - 1)
+                            time = timeit.timeit(stmt=func, number=10)
+                            time /= 10
+                            average += time
+                            iteration += 1
+                            printProgressBar(iteration, total, prefix=f'Progress: ', suffix='Complete', length=50)
+                        average /= settings['n']
+                        result[i] = average
+                    numpy.savetxt(f'processed_data/{algorythm}/{kind}.csv', result, delimiter=',')
+                with open(f'processed_data/{algorythm}/settings.json', 'w') as target:
+                    json.dump(settings, target)
+            print('Data processed successfully')
+
+
     def processbyalgorythm(name=None, *args):
         """
         ===================================
@@ -418,17 +502,15 @@ if __name__ == '__main__':
                 for kind in data_switch:
                     data = numpy.load(f'data/{kind}.npy', allow_pickle=True)
                     result = numpy.zeros(10)
-                    for i in range(-1, 10):
+                    for i in range(9, -1, -1):
                         average = 0
                         for j in range(settings['n']):
-                            # stmt = 'setrecursionlimit(10**6)\nfunc(arr, 0, stop)'
-                            #setup = f"from sorts import {algorythm} as func; from sys import setrecursionlimit; arr = {str(arr)}; stop = {len(arr) - 1}"
-                            # current = timeit.timeit(stmt=stmt, setup=setup, number=1)
-                            data[i+j] = numpy.asarray(data[i+j])
                             def func():
+                                arr = data[i+j]
                                 sort_switch[algorythm](data[i+j], 0, data[i+j].size - 1)
-                            current = timeit.timeit(func, number=1)
-                            average += current
+                            time = timeit.timeit(stmt=func, number=10)
+                            time /= 10
+                            average += time
                             iteration += 1
                             printProgressBar(iteration, total, prefix=f'Progress: ', suffix='Complete', length=50)
                         average /= settings['n']
@@ -466,7 +548,7 @@ if __name__ == '__main__':
                 kinds = data_switch
             with open('data/settings.json', 'r') as source:
                 settings = json.load(source)
-            total = len(kinds) * len(sort_switch) * 10 * settings['n']
+            total = len(kinds) * len(sort_switch) * 11 * settings['n']
             iteration = 0
             printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
             for kind in kinds:
@@ -556,18 +638,19 @@ if __name__ == '__main__':
         addtoswitch(sorts.mergesort, target=sort_switch)
         addtoswitch(sorts.heapsort, target=sort_switch)
         addtoswitch(sorts.countingsort, target=sort_switch)
+        addtoswitch(sorts.shellsort, target=sort_switch)
         addtoswitch(myexit, name='exit')
         addtoswitch(myhelp, name='help')
         addtoswitch(mylist, name='list')
         mysort.__doc__ += '\n\t\tAvailable algorythms:'
-        processbyalgorythm.__doc__ += '\n\t\tAvailable algorythms:'
+        processdata.__doc__ += '\n\t\tAvailable algorythms:'
         for algorythm in sort_switch:
             mysort.__doc__ += ('\n\t\t\t+' + algorythm)
-            processbyalgorythm.__doc__ += ('\n\t\t\t+' + algorythm)
-        processbytype.__doc__ += '\n\t\tAvailable data types:'
+            processdata.__doc__ += ('\n\t\t\t+' + algorythm)
+        processdata.__doc__ += '\n\t\tAvailable data types:'
         gendata.__doc__ += '\n\t\tAvailable data types:'
         for kind in data_switch:
-            processbytype.__doc__ += ('\n\t\t\t+' + kind)
+            processdata.__doc__ += ('\n\t\t\t+' + kind)
             gendata.__doc__ += ('\n\t\t\t+' + kind)
         addtoswitch(mysort, name='sort')
         addtoswitch(sayhi)
@@ -577,7 +660,7 @@ if __name__ == '__main__':
         addtoswitch(backup)
         addtoswitch(restore)
         addtoswitch(gendata)
-        addtoswitch(processbyalgorythm)
+        addtoswitch(processdata)
         addtoswitch(processbytype)
         addtoswitch(plotdata)
 
@@ -596,13 +679,23 @@ if __name__ == '__main__':
     while True:
         print('>>', end=' ')
         data = input().split()
-        while '' in data:
-            data.remove('')
+        kwarguments = {}
+        for i in range(len(data) - 1, -1, -1):
+            if data[i] == ' ':
+                del data[i]
         if not data:
             continue
+        for i in range(len(data) - 1, -1, -1):
+            if match := re.match('^-.$', data[i]):
+                del data[i]
+                try:
+                    kwarguments[match.string] = data[i]
+                    del data[i]
+                except KeyError:
+                    print(f'{match.string} value not found.')
         command, *arguments = data
         if func := switch.get(command):
-            func(*arguments)
+            func(*arguments, **kwarguments)
         else:
             print(f'{command} is not a defined command')
 

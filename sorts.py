@@ -26,7 +26,7 @@ def bubblesort(arr, start, stop):
                 arr[j], arr[j + 1] = arr[j + 1], arr[j]
                 done = False
         if done:
-            return arr
+            return
     return
 
 
@@ -42,13 +42,24 @@ def right_quicksort(arr, start, stop):
         return
     else:
         p = start
-        for i in range(start, stop):
-            if arr[i] < arr[stop]:
+        i = start
+        j = stop
+        while i < j:
+            if arr[i] == arr[j]:
+                j -= 1
+                arr[i], arr[j] = arr[j], arr[i]
+                continue
+            elif arr[i] < arr[j]:
                 arr[p], arr[i] = arr[i], arr[p]
                 p += 1
-        arr[stop], arr[p] = arr[p], arr[stop]
+            i += 1
+        i = p
+        while j <= stop:
+            arr[i], arr[j] = arr[j], arr[i]
+            j += 1
+            i += 1
         right_quicksort(arr, start, p-1)
-        right_quicksort(arr, p+1, stop)
+        right_quicksort(arr, i, stop)
         return
 
 
@@ -59,13 +70,24 @@ def random_quicksort(arr, start, stop):
         p = random.randint(start, stop)
         arr[stop], arr[p] = arr[p], arr[stop]
         p = start
-        for i in range(start, stop):
-            if arr[i] < arr[stop]:
+        i = start
+        j = stop
+        while i < j:
+            if arr[i] == arr[j]:
+                j -= 1
+                arr[i], arr[j] = arr[j], arr[i]
+                continue
+            elif arr[i] < arr[j]:
                 arr[p], arr[i] = arr[i], arr[p]
                 p += 1
-        arr[stop], arr[p] = arr[p], arr[stop]
+            i += 1
+        i = p
+        while j <= stop:
+            arr[i], arr[j] = arr[j], arr[i]
+            j += 1
+            i += 1
         random_quicksort(arr, start, p-1)
-        random_quicksort(arr, p+1, stop)
+        random_quicksort(arr, i, stop)
         return
 
 
@@ -137,6 +159,20 @@ def countingsort(arr, start, stop):
             arr[p-1] = i
             p -= 1
     return
+
+
+def shellsort(arr, start, stop):
+    p = stop // 2
+    while p > 0:
+        for i in range(stop, -1, -p):
+            done = True
+            for j in range(i):
+                if arr[j] > arr[j + 1]:
+                    arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                    done = False
+            if done:
+                break
+        p //= 2
 
 
 if __name__ == '__main__':
