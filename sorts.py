@@ -120,10 +120,10 @@ def heapmove(arr, p, i):
         son = (p * 2 + 1)
         daughter = (p * 2 + 2)
         if daughter <= i:
-            lower = max(son, daughter, key=lambda key: arr[key])
-            if arr[p] < arr[lower]:
-                arr[p], arr[lower] = arr[lower], arr[p]
-                p = lower
+            higher = max(son, daughter, key=lambda key: arr[key])
+            if arr[p] < arr[higher]:
+                arr[p], arr[higher] = arr[higher], arr[p]
+                p = higher
             else:
                 break
         elif son <= i:

@@ -5,4 +5,4 @@
 - Initialize virtual enviroment  `python -m venv venv`
 - Activate virtual enviroment `venv\Scripts\activate`
 - Install all python modules `pip install -r requirements.txt`
-- Run the app `python sorter.py`
+- Run the app `python script.py`
