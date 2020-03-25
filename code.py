@@ -291,46 +291,29 @@ if __name__ == '__main__':
             print('Data restored successfully.')
 
 
-    def gendata(name=None, *args):
+    def gendata(*args):
         """
-        ============
-        gendata type
-        ============
+        ========
+        gendata
+        ========
 
         Generates data.
-
-        Arguments:
-        type (optional): one of available types of data to be regenerated
         """
         if len(args) != 0:
             print('Too many arguments were given.')
         else:
-            if name != None:
-                if data_switch.get(name) != None:
-                    kinds = {name: data_switch[name]}
-                else:
-                    print(f'{name} is not an available data type')
-                    return
-                if os.path.isfile('data/settings.json'):
-                   with open('data/settings.json', 'r') as source:
-                       settings = json.load(source)
-                else:
-                   print('To regenerate type of data you have to generate all data first')
-                   return
-            else:
-                kinds = data_switch
-                with open('settings.json', 'r') as source:
-                    settings = json.load(source)
+            with open('settings.json', 'r') as source:
+                settings = json.load(source)
             random.seed(settings['seed'])
-            total = len(kinds) * 10 * settings['n']
+            total = len(data_switch) * 10 * settings['n']
             iteration = 0
             printProgressBar(iteration, total, prefix='Progress:', suffix='Complete', length=50)
-            for kind in kinds:
+            for kind in data_switch:
                 data = []
                 for i in range(10):
                     for j in range(settings['n']):
-                        current = [random.randint(settings['s'], settings['e']) for _ in
-                                   range(settings['l'] + settings['d'] * i)]
+                        current = [random.randint(1, settings['l'] + (settings['d'] * i)//2) for _ in range(settings['l'] + (settings['d'] * i))]
+                        # current = [random.randint(1, settings['l']**(i + 1)) for _ in range(settings['l']**(i + 1))]
                         current = data_switch[kind](current)
                         current = numpy.asarray(current)
                         data.append(current)
@@ -452,8 +435,8 @@ if __name__ == '__main__':
                         average = 0
                         for j in range(settings['n']):
                             def func():
-                                arr = data[i+j]
-                                sort_switch[algorythm](data[i+j], 0, data[i+j].size - 1)
+                                arr = data[i*settings['n']+j]
+                                sort_switch[algorythm](arr, 0, arr.size - 1)
                             time = timeit.timeit(stmt=func, number=10)
                             time /= 10
                             average += time
@@ -595,6 +578,8 @@ if __name__ == '__main__':
                 with open(f'processed_data/{algorythm}/settings.json', 'r') as source:
                     settings = json.load(source)
                 x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
+                # x = numpy.full(10, settings['l'])
+                # x = numpy.power(x, range(1, 11))
                 for kind in data_switch:
                     y = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
                     plt.plot(x, y, marker='o', label=kind)
@@ -603,7 +588,7 @@ if __name__ == '__main__':
                 plt.xlabel('Lenght of the test case')
                 plt.ylabel('Time [s]')
                 plt.grid(True)
-                plt.savefig(f'figures/{algorythm}.png')
+                plt.savefig(f'figures/algorythms/{algorythm}.png')
                 plt.clf()
             for kind in data_switch:
                 for algorythm in sort_switch:
@@ -612,6 +597,8 @@ if __name__ == '__main__':
                     with open(f'processed_data/{algorythm}/settings.json', 'r') as source:
                         settings = json.load(source)
                     x = numpy.arange(settings['l'], settings['l'] + settings['d'] * 10, settings['d'])
+                    # x = numpy.full(10, settings['l'])
+                    # x = numpy.power(x, range(1, 11))
                     y = numpy.loadtxt(f'processed_data/{algorythm}/{kind}.csv', delimiter=',')
                     plt.plot(x, y, marker='o', label=algorythm)
                 plt.title(kind)
@@ -619,7 +606,7 @@ if __name__ == '__main__':
                 plt.xlabel('Lenght of the test case')
                 plt.ylabel('Time [s]')
                 plt.grid(True)
-                plt.savefig(f'figures/{kind}.png')
+                plt.savefig(f'figures/data_types/{kind}.png')
                 plt.clf()
         print('Plotting done successfully')
 
@@ -674,6 +661,10 @@ if __name__ == '__main__':
         os.mkdir('figures')
     if not os.path.isdir('data'):
         os.mkdir('data')
+    if not os.path.isdir('figures/algorythms'):
+        os.mkdir('figures/algorythms')
+    if not os.path.isdir('figures/data_types'):
+        os.mkdir('figures/data_types')
     print('Sorter by Jakub Błażejowski', 'Type list to get list of available commands.', sep='\n')
     createswicthes()
     while True:
