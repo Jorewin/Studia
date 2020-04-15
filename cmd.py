@@ -1,20 +1,16 @@
 import types
 import functools
 import re
+import sys
+import os
 
 
-def typecheck(value, _type) -> bool:
-    """
-    Returns 1 if value is _type type, 0 otherwise.
+class Switch():
+    def __init__(self):
+        self.commands = {}
 
-    :param value:
-    :param _type:
-    :return: 0 or 1
-    :rtype: bool
-    """
-    if not isinstance(value, _type):
-        return True
-    return False
+
+switch = Switch()
 
 
 def addtoswitch(_func: types.FunctionType = None,* , switch: dict = None, name: str = None) -> types.FunctionType:
@@ -31,48 +27,148 @@ def addtoswitch(_func: types.FunctionType = None,* , switch: dict = None, name: 
     :raises TypeError: if any of given arguments is of the wrong type
     """
     def decorator_addtoswitch(func: types.FunctionType) -> types.FunctionType:
-        if typecheck(switch, dict):
+        if not isinstance(switch, dict):
             raise TypeError(f'Switch must be a dictionary, not a {type(switch)}.')
-        if name == None:
-            name = func.__name__
-        if typecheck(name, str):
+        if name is None:
+            switch[func.__name__] = func
+        elif isinstance(name, str):
+            switch[name] = func
+        else:
             raise TypeError(f'Name must be a string, not a {type(name)}.')
-        switch[name] = func
-
-        @functools.wraps(func)
-        def wrapper_addtoswitch(*args, **kwargs):
-            counter = 0
-            kcounter = 0
-            for label, _type in func.__annotations__.items():
-                if kwargs.get(label) is not None:
-                    value = kwargs[label]
-                    kcounter += 1
-                elif counter < len(args):
-                    value = args[counter]
-                    counter += 1
-                else:
-                    print(f'Missing argument {label} in {name} command.')
-                    break
-                if typecheck(value, _type):
-                    print(f'{label} must be a {_type}, not a {type(value)}.')
-                    break
-            else:
-                if len(args) == counter and len(kwargs) == kcounter:
-                    func(*args, **kwargs)
-                else:
-                    print('Too many arguments or keyword arguments given.')
-        return wrapper_addtoswitch
+        return func
     if _func is None:
         return decorator_addtoswitch
     else:
         return decorator_addtoswitch(_func)
 
 
-def main(switch):
+def correctness(func: types.FunctionType) -> types.FunctionType:
+    """
+    Checks if all args and kwargs are of the right type (Function must have annotations for this to work)
+    :param types.FunctionType func:
+    :return:
+    :rtype: types.FunctionType
+    """
+    @functools.wraps(func)
+    def wrapper_correctness(*args, **kwargs):
+        checklist = {arg: 0 for arg in func.__annotations__}
+        for kwarg in kwargs:
+            if (_type := func.__annotations__.get(kwarg)) is None:
+                print(f'{func.__name__} got an unexpected argument {kwarg}')
+                break
+            if not isinstance(kwargs[kwarg], _type):
+                print(f'{func.__name__} {kwarg} must be a {_type}, not a {type(kwargs[kwarg])}.')
+                break
+            checklist[kwarg] = 1
+        else:
+            if func.__kwdefaults__ is not None:
+                for kwarg in func.__kwdefaults__:
+                    checklist[kwarg] = 1
+            counter = 0
+            for arg in checklist:
+                if checklist[arg] == 1:
+                    continue
+                if counter >= len(args):
+                    print(f'{func.__name__} Missing argument {arg}')
+                    break
+                if not isinstance(args[counter], func.__annotations__[arg]):
+                    print(f'{func.__name__} {arg} must be a {func.__annotations__[arg]}, not a {type(args[counter])}')
+                    break
+                counter += 1
+            else:
+                if counter == len(args):
+                    func(*args, **kwargs)
+                else:
+                    print(f'{func.__name__} Too many arguments were given')
+    return wrapper_correctness
+
+
+@addtoswitch(switch=switch.commands, name='list')
+@correctness
+def clist(switch: Switch):
+    """
+    Used to generate list of available commands
+    :param Switch switch:
+    :return:
+    """
+    print('Available commands:')
+    for command in switch.commands:
+        print('\t+', command)
+    print('Type help [command_name] to get more info about specific command')
+
+
+@addtoswitch(switch=switch.commands, name='exit')
+@correctness
+def cexit(switch: Switch):
+    """
+    Terminates the process
+    :param Switch switch:
+    :return:
+    """
+    print('Process terminated')
+    sys.exit()
+
+
+@addtoswitch(switch=switch.commands, name='help')
+@correctness
+def chelp(switch: Switch, command: str = None):
+    """
+    Shows documentation of the chosen command
+    :param Switch switch:
+    :param command:
+    :type command: None or str
+    :return:
+    """
+    if command is None:
+        print('Type help [command_name] to get more info about specific command')
+    elif (func := switch.commands.get(command)) is not None:
+        print(func.__doc__)
+    else:
+        print(f'Command {command} is not an available command, type list to see the list of available commands')
+
+
+@addtoswitch(switch=switch.commands, name='clear')
+@correctness
+def cclear(switch: Switch):
+    """
+    Clear the screen
+    :param Switch switch:
+    :return:
+    """
+    if os.name == 'nt':
+        os.system('cls')
+    else:
+        os.system('clear')
+
+
+def detector(charray: str):
+    """
+    Convert string to int or list if possible
+    :param str charray:
+    :return:
+    """
+    if re.match('\[([0-9]+,)*[0-9]+\]', charray):
+        arr = [int(i) for i in re.findall('[0-9]+', charray)]
+        return arr
+    try:
+        value = int(charray)
+    except ValueError:
+        pass
+    else:
+        return value
+    return charray
+
+
+def main(switch: Switch):
+    """
+    Terminal handler
+    :param Switch switch:
+    :return:
+    """
     while True:
         print('>> ', end='')
         data = input().strip().split()
-        for i in data:
+        for i in range(len(data)-1, -1, -1):
             if data[i] == ' ':
                 del data[i]
         if len(data) == 0:
@@ -82,16 +178,17 @@ def main(switch):
             if match := re.match('^-.$', data[i]):
                 del data[i]
                 try:
-                    kwarguments[match.string] = data[i]
+                    kwarguments[match.string] = detector(data[i])
                     del data[i]
                 except KeyError:
                     print(f'{match.string} value not found.')
         command, *arguments = data
-        if (func := switch.get(command.lower())) is not None:
-            func(*arguments, **kwarguments)
+        arguments = [detector(argument) for argument in arguments]
+        if (func := switch.commands.get(command.lower())) is not None:
+            func(switch, *arguments, **kwarguments)
         else:
             print(f'{command} is not a defined command')
 
 
 if __name__ == '__main__':
-    pass
+    print(addtoswitch.__annotations__)
