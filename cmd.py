@@ -5,12 +5,12 @@ import sys
 import os
 
 
-class Switch():
+class Controller():
     def __init__(self):
         self.commands = {}
 
 
-switch = Switch()
+controller= Controller()
 
 
 def addtoswitch(_func: types.FunctionType = None,* , switch: dict = None, name: str = None) -> types.FunctionType:
@@ -69,7 +69,7 @@ def correctness(func: types.FunctionType) -> types.FunctionType:
                 if checklist[arg] == 1:
                     continue
                 if counter >= len(args):
-                    print(f'{func.__name__} Missing argument {arg}')
+                    print(f'{func.__name__}, missing argument {arg}')
                     break
                 if not isinstance(args[counter], func.__annotations__[arg]):
                     print(f'{func.__name__} {arg} must be a {func.__annotations__[arg]}, not a {type(args[counter])}')
@@ -79,60 +79,60 @@ def correctness(func: types.FunctionType) -> types.FunctionType:
                 if counter == len(args):
                     func(*args, **kwargs)
                 else:
-                    print(f'{func.__name__} Too many arguments were given')
+                    print(f'{func.__name__}, too many arguments were given')
     return wrapper_correctness
 
 
-@addtoswitch(switch=switch.commands, name='list')
+@addtoswitch(switch=controller.commands, name='list')
 @correctness
-def clist(switch: Switch):
+def clist(controller: Controller):
     """
     Used to generate list of available commands
-    :param Switch switch:
+    :param Controller controller:
     :return:
     """
     print('Available commands:')
-    for command in switch.commands:
-        print('\t+', command)
+    for command in controller.commands:
+        print(f'\t+ {command:20} -> {controller.commands[command].__name__}')
     print('Type help [command_name] to get more info about specific command')
 
 
-@addtoswitch(switch=switch.commands, name='exit')
+@addtoswitch(switch=controller.commands, name='exit')
 @correctness
-def cexit(switch: Switch):
+def cexit(controller: Controller):
     """
     Terminates the process
-    :param Switch switch:
+    :param Controller controller:
     :return:
     """
     print('Process terminated')
     sys.exit()
 
 
-@addtoswitch(switch=switch.commands, name='help')
+@addtoswitch(switch=controller.commands, name='help')
 @correctness
-def chelp(switch: Switch, command: str = None):
+def chelp(controller: Controller, command: str = None):
     """
     Shows documentation of the chosen command
-    :param Switch switch:
+    :param Controller controller:
     :param command:
     :type command: None or str
     :return:
     """
     if command is None:
         print('Type help [command_name] to get more info about specific command')
-    elif (func := switch.commands.get(command)) is not None:
+    elif (func := controller.commands.get(command)) is not None:
         print(func.__doc__)
     else:
         print(f'Command {command} is not an available command, type list to see the list of available commands')
 
 
-@addtoswitch(switch=switch.commands, name='clear')
+@addtoswitch(switch=controller.commands, name='clear')
 @correctness
-def cclear(switch: Switch):
+def cclear(controller: Controller):
     """
     Clear the screen
-    :param Switch switch:
+    :param Controller controller:
     :return:
     """
     if os.name == 'nt':
@@ -159,10 +159,10 @@ def detector(charray: str):
     return charray
 
 
-def main(switch: Switch):
+def main(controller: Controller):
     """
     Terminal handler
-    :param Switch switch:
+    :param Controller controller:
     :return:
     """
     while True:
@@ -184,8 +184,8 @@ def main(switch: Switch):
                     print(f'{match.string} value not found.')
         command, *arguments = data
         arguments = [detector(argument) for argument in arguments]
-        if (func := switch.commands.get(command.lower())) is not None:
-            func(switch, *arguments, **kwarguments)
+        if (func := controller.commands.get(command.lower())) is not None:
+            func(controller, *arguments, **kwarguments)
         else:
             print(f'{command} is not a defined command')
 
