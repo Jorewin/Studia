@@ -15,6 +15,7 @@ class Handler(cmd.Controller):
         self.readmodes = {}
         self.writemodes = {}
         self.orders = {}
+        self.kinds = {}
         super().__init__()
 
 
@@ -27,6 +28,16 @@ class BSTnode():
 
     def __repr__(self):
         return f'BSTnode value: {self.value}, son: {self.son}, daughter: {self.daughter}'
+
+
+class AVLnode(BSTnode):
+    def __init__(self, balance = 0):
+        self.balance = balance
+        super().__init__()
+
+
+    def __repr__(self):
+        return f'AVLnode value: {self.value}, son: {self.son}, daughter: {self.daughter}, bf: {self.balance}'
 
 
 handler = Handler()
@@ -142,7 +153,7 @@ def enterdata(handler: Handler, arr: list):
     """
     Lets user input list into the system
     :param Handler handler:
-    :param list arr: example [1,2,3,4,5]
+    :param list arr: User specified, example [1,2,3,4,5]
     :return:
     """
     with open('userdata.json', 'w') as target:
@@ -156,7 +167,7 @@ def gendata(handler: Handler, lenght: int):
     """
     Generates test arr
     :param Toggle toggle:
-    :param int lenght:
+    :param int lenght: User specified
     :return:
     """
     if lenght < 0:
@@ -181,6 +192,54 @@ def printdata(handler: Handler):
         return
     with open('userdata.json', 'r') as source:
         print(json.load(source))
+
+
+@cmd.addtoswitch(switch=handler.orders)
+def pre_order(tree: list, p: int):
+    """
+    Yields keys of the tree
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    left, right = [], []
+    if tree[p].son is not None:
+        left = pre_order(tree, tree[p].son)
+    if tree[p].daughter is not None:
+        right = pre_order(tree, tree[p].daughter)
+    return [p] + left + right
+
+
+@cmd.addtoswitch(switch=handler.orders)
+def in_order(tree: list, p: int):
+    """
+    Yields keys of the tree
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    left, right = [], []
+    if tree[p].son is not None:
+        left = in_order(tree, tree[p].son)
+    if tree[p].daughter is not None:
+        right = in_order(tree, tree[p].daughter)
+    return left + [p] + right
+
+
+@cmd.addtoswitch(switch=handler.orders)
+def post_order(tree: list, p: int):
+    """
+    Yields keys of the tree
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    left, right = [], []
+    if tree[p].son is not None:
+        left = post_order(tree, tree[p].son)
+    if tree[p].daughter is not None:
+        right = post_order(tree, tree[p].daughter)
+    return left + right + [p]
 
 
 @cmd.addtoswitch(switch=handler.commands)
@@ -215,52 +274,43 @@ def genbst(handler: Handler, arr: list):
     print('Tree generated successfully')
 
 
-@cmd.addtoswitch(switch=handler.orders)
-def pre_order(tree, p: int):
+@cmd.addtoswitch(switch=handler.commands)
+@use_userdata(source='userdata.json', target='usertree.pkl')
+@cmd.addtoswitch(switch=handler.algorythms)
+def genavl(handler: Handler, arr: list):
     """
-    Yields keys of the tree
-    :param arr:
-    :param int p:
+    Converts list to BST tree
+    :param Toggle toggle:
+    :param list arr:
     :return:
     """
-    left, right = [], []
-    if tree[p].son is not None:
-        left = pre_order(tree, tree[p].son)
-    if tree[p].daughter is not None:
-        right = pre_order(tree, tree[p].daughter)
-    return [p] + left + right
+    for key in range(len(arr)):
+        node = AVLnode(arr[key])
+        arr[key] = node
+        if key == 0:
+            continue
+        p = 0
+        while True:
+            if arr[key].value < arr[p].value:
+                arr[p].balance += 1
+                if arr[p].son is None:
+                    arr[p].son = key
+                    break
+                else:
+                    p = arr[p].son
+            else:
+                arr[p].balance -= 1
+                if arr[p].daughter is None:
+                    arr[p].daughter = key
+                    break
+                else:
+                    p = arr[p].daughter
+        for p in in_order(arr, 0):
+            if arr[p].balance < -1:
+                if arr[arr[p].daughter].balance >= 0:
+                    pass
 
-
-@cmd.addtoswitch(switch=handler.orders)
-def in_order(tree, p: int):
-    """
-    Yields keys of the tree
-    :param arr:
-    :param int p:
-    :return:
-    """
-    left, right = [], []
-    if tree[p].son is not None:
-        left = in_order(tree, tree[p].son)
-    if tree[p].daughter is not None:
-        right = in_order(tree, tree[p].daughter)
-    return left + [p] + right
-
-
-@cmd.addtoswitch(switch=handler.orders)
-def post_order(tree, p: int):
-    """
-    Yields keys of the tree
-    :param arr:
-    :param int p:
-    :return:
-    """
-    left, right = [], []
-    if tree[p].son is not None:
-        left = post_order(tree, tree[p].son)
-    if tree[p].daughter is not None:
-        right = post_order(tree, tree[p].daughter)
-    return left + right + [p]
+    print('Tree generated successfully')
 
 
 @cmd.addtoswitch(switch=handler.commands)
@@ -272,7 +322,7 @@ def printtree(handler: Handler, tree: list, method: str):
     Prints contents of the tree
     :param Handler handler:
     :param list tree:
-    :param str method:
+    :param str method: User specified
     :return:
     """
     if (iterator := handler.orders.get(method)) is None:
@@ -283,31 +333,28 @@ def printtree(handler: Handler, tree: list, method: str):
         print('\nDone')
 
 
-def lowest(tree: list):
+@cmd.addtoswitch(switch=handler.kinds)
+def lowest(tree: list, p: int = 0):
     if len(tree) == 0:
         return None
-    path = ''
-    p = 0
     while tree[p].son is not None:
-        path += repr(tree[p]) + '\n'
+        yield p
         p = tree[p].son
-    path += repr(tree[p]) + '\n'
-    return path
+    yield p
 
 
-def largest(tree: list):
+@cmd.addtoswitch(switch=handler.kinds)
+def largest(tree: list, p: int = 0):
     if len(tree) == 0:
         return None
-    path = ''
-    p = 0
     while tree[p].daughter is not None:
-        path += repr(tree[p]) + '\n'
+        yield p
         p = tree[p].daughter
-    path += repr(tree[p]) + '\n'
-    return path
+    yield p
 
 
 @cmd.addtoswitch(switch=handler.commands)
+@availability(toggle=handler.kinds, name='methods')
 @use_userdata(source='usertree.pkl')
 @cmd.correctness
 def find(handler: Handler, tree: list, method: str):
@@ -315,15 +362,89 @@ def find(handler: Handler, tree: list, method: str):
     Finds the lowest or the largest element
     :param Handler handler:
     :param list tree:
-    :param str method:
+    :param str method: User specified
     :return:
     """
-    if method == 'lowest':
-        print(lowest(tree))
-    elif method == 'largest':
-        print(largest(tree))
+    if (func := handler.kinds.get(method)) is not None:
+        path = ''
+        for key in func(tree):
+            path += repr(tree[key]) + '\n'
+        print(path)
     else:
         print(f'{method} method is not available.')
+
+
+def connect(tree: list, p: int, c: int, set: int):
+    """
+    Connects child with parent
+    :param list tree:
+    :param int p:
+    :param int c:
+    :param int set: 0 or 1
+    :return:
+    """
+    if set == 0:
+        tree[p].son = c
+    else:
+        tree[p].daughter = c
+
+
+def delete(tree: list, key: int, p: int = 0):
+    """
+    Delete a node
+    :param list tree:
+    :param int key:
+    :param int p:
+    :return:
+    """
+    parent = (0, 0)
+    while True:
+        if tree[p].value == key:
+            if tree[p].son is None and tree[p].daughter is None:
+                connect(tree, parent[0], None, parent[1])
+            elif tree[p].son is None:
+                connect(tree, parent[0], tree[p].daughter, parent[1])
+            elif tree[p].daughter is None:
+                connect(tree, parent[0], tree[p].son, parent[1])
+            else:
+                s = lowest(tree, p=tree[p].daughter)[-1]
+                sp = lowest(tree, p=tree[p].daughter)[-2]
+                tree[p].value = tree[s].value
+                delete(tree, tree[s].value, sp)
+            break
+        elif key < tree[p].value and tree[p].son is not None:
+            parent = (p, 0)
+            p = tree[p].son
+        elif tree[p].daughter is not None:
+            parent = (p, 1)
+            p = tree[p].daughter
+        else:
+            print(f'There is no node with given {key} key')
+            break
+
+
+@cmd.addtoswitch(switch=handler.commands, name='del')
+@use_userdata(source='usertree.pkl', target='usertree.pkl')
+@cmd.correctness
+def mydel(handler: Handler, tree: list, times: int):
+    """
+    Delete number of nodes
+    :param Handler handler:
+    :param list tree:
+    :param int times: User specified, number of nodes to be deleted
+    :return:
+    """
+    for _ in range(times):
+        print('Enter key of the node to be deleted')
+        key = 0
+        while True:
+            try:
+                key = int(input().strip())
+            except ValueError:
+                print('Key must be an int')
+            else:
+                break
+        delete(tree, key)
 
 
 if __name__ == '__main__':

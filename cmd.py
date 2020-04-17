@@ -115,13 +115,14 @@ def chelp(controller: Controller, command: str = None):
     """
     Shows documentation of the chosen command
     :param Controller controller:
-    :param command:
+    :param command: User specified
     :type command: None or str
     :return:
     """
     if command is None:
         print('Type help [command_name] to get more info about specific command')
     elif (func := controller.commands.get(command)) is not None:
+        print(f'Usage: {command} params marked as user specified')
         print(func.__doc__)
     else:
         print(f'Command {command} is not an available command, type list to see the list of available commands')
