@@ -122,7 +122,9 @@ def chelp(controller: Controller, command: str = None):
     if command is None:
         print('Type help [command_name] to get more info about specific command')
     elif (func := controller.commands.get(command)) is not None:
-        print(f'Usage: {command} params marked as user specified')
+        print(f'''{command} command
+Usage: command, params marked as user specified, optional params in format [name] value
+Example: printtree in_order _e yes''')
         print(func.__doc__)
     else:
         print(f'Command {command} is not an available command, type list to see the list of available commands')
@@ -176,7 +178,7 @@ def main(controller: Controller):
             continue
         kwarguments = {}
         for i in range(len(data) - 1, -1, -1):
-            if match := re.match('^-.$', data[i]):
+            if match := re.match('^_.$', data[i]):
                 del data[i]
                 try:
                     kwarguments[match.string] = detector(data[i])

@@ -1,5 +1,5 @@
 import cmd
-import numpy
+import copy
 import random
 import os.path
 import json
@@ -7,6 +7,7 @@ import functools
 import types
 import pickle
 import re
+import math
 
 
 class Handler(cmd.Controller):
@@ -31,9 +32,9 @@ class BSTnode():
 
 
 class AVLnode(BSTnode):
-    def __init__(self, balance = 0):
+    def __init__(self, value: int, son: int = None, daughter: int = None, balance: int = 0):
+        super().__init__(value, son, daughter)
         self.balance = balance
-        super().__init__()
 
 
     def __repr__(self):
@@ -73,6 +74,7 @@ def use_userdata(_func: types.FunctionType = None, *, source: str = None, target
                 if handler.writemodes.get(_type.group()) is None:
                     print(f'{_type.group()} extension is not available')
                 handler.writemodes[_type.group()](data, target)
+            print(f'{func.__name__} finished successfully')
         return wrapper_use_userdata
     if _func is None:
         return decorator_use_userdata
@@ -271,7 +273,100 @@ def genbst(handler: Handler, arr: list):
                     break
                 else:
                     p = arr[p].daughter
-    print('Tree generated successfully')
+
+
+def RR(tree: list, p: int):
+    """
+    RR
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    node = AVLnode(tree[p].value, tree[p].son, tree[p].daughter, tree[p].balance)
+    pointer = tree[p].daughter
+    tree[p].value = tree[pointer].value
+    tree[p].daughter = tree[pointer].daughter
+    tree[p].balance = tree[pointer].balance + 1
+    tree[pointer].daughter = tree[pointer].son
+    tree[pointer].son = node.son
+    tree[pointer].value = node.value
+    tree[pointer].balance = node.balance - tree[pointer].balance + 1
+    tree[p].son = pointer
+
+
+def LL(tree: list, p: int):
+    """
+    LL
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    node = AVLnode(tree[p].value, tree[p].son, tree[p].daughter, tree[p].balance)
+    pointer = tree[p].son
+    tree[p].value = tree[pointer].value
+    tree[p].son = tree[pointer].son
+    tree[p].balance = tree[pointer].balance - 1
+    tree[pointer].son = tree[pointer].daughter
+    tree[pointer].daughter = node.daughter
+    tree[pointer].value = node.value
+    tree[pointer].balance = node.balance - tree[pointer].balance - 1
+    tree[p].daughter = pointer
+
+
+def balancer(tree: list):
+    """
+    Balances the AVL tree
+    :param list tree:
+    :return:
+    """
+    for p in post_order(tree, 0):
+        while abs(tree[p].balance) > 1:
+            if tree[p].balance < -1:
+                if tree[tree[p].daughter].balance <= 0:
+                    RR(tree, p)
+                else:
+                    LL(tree, tree[p].daughter)
+                    RR(tree, p)
+            elif tree[p].balance > 1:
+                if tree[tree[p].son].balance >= 0:
+                    LL(tree, p)
+                else:
+                    RR(tree, tree[p].son)
+                    LL(tree, p)
+
+
+def createavl(tree: list, start: int, stop: int):
+    """
+    Recursive function
+    :param list tree:
+    :param int start:
+    :param int stop:
+    :return:
+    """
+    if stop < start:
+        return
+    key = (start + stop) // 2
+    node = AVLnode(tree[key])
+    tree[key] = node
+    p = 0
+    while True:
+        if tree[key].value < tree[p].value:
+            tree[p].balance += 1
+            if tree[p].son is None:
+                tree[p].son = key
+                break
+            else:
+                p = tree[p].son
+        else:
+            tree[p].balance -= 1
+            if tree[p].daughter is None:
+                tree[p].daughter = key
+                break
+            else:
+                p = tree[p].daughter
+    balancer(tree)
+    createavl(tree, start, key - 1)
+    createavl(tree, key + 1, stop)
 
 
 @cmd.addtoswitch(switch=handler.commands)
@@ -279,58 +374,40 @@ def genbst(handler: Handler, arr: list):
 @cmd.addtoswitch(switch=handler.algorythms)
 def genavl(handler: Handler, arr: list):
     """
-    Converts list to BST tree
+    Converts list to AVL tree
     :param Toggle toggle:
     :param list arr:
     :return:
     """
-    for key in range(len(arr)):
-        node = AVLnode(arr[key])
-        arr[key] = node
-        if key == 0:
-            continue
-        p = 0
-        while True:
-            if arr[key].value < arr[p].value:
-                arr[p].balance += 1
-                if arr[p].son is None:
-                    arr[p].son = key
-                    break
-                else:
-                    p = arr[p].son
-            else:
-                arr[p].balance -= 1
-                if arr[p].daughter is None:
-                    arr[p].daughter = key
-                    break
-                else:
-                    p = arr[p].daughter
-        for p in in_order(arr, 0):
-            if arr[p].balance < -1:
-                if arr[arr[p].daughter].balance >= 0:
-                    pass
-
-    print('Tree generated successfully')
+    key = len(arr) // 2
+    node = AVLnode(arr[key])
+    arr.pop(key)
+    arr.insert(0, node)
+    createavl(arr, 1, len(arr) - 1)
 
 
 @cmd.addtoswitch(switch=handler.commands)
 @availability(toggle=handler.orders, name='methods')
 @use_userdata(source='usertree.pkl')
 @cmd.correctness
-def printtree(handler: Handler, tree: list, method: str):
+def printtree(handler: Handler, tree: list, method: str, *, _e: str = 'no'):
     """
     Prints contents of the tree
     :param Handler handler:
     :param list tree:
     :param str method: User specified
+    :param str _e: User specified, optional, extended node view, yes or no
     :return:
     """
     if (iterator := handler.orders.get(method)) is None:
         print(f'{method} method is not available')
     else:
-        for key in iterator(tree, 0):
-            print(tree[key].value, end=' ')
-        print('\nDone')
+        if _e == 'yes':
+            for key in iterator(tree, 0):
+                print(f'{key}', repr(tree[key]))
+        else:
+            for key in iterator(tree, 0):
+                print(tree[key].value, end=' ')
 
 
 @cmd.addtoswitch(switch=handler.kinds)
@@ -389,7 +466,7 @@ def connect(tree: list, p: int, c: int, set: int):
         tree[p].daughter = c
 
 
-def delete(tree: list, key: int, p: int = 0):
+def deletebst(tree: list, key: int, p: int = 0):
     """
     Delete a node
     :param list tree:
@@ -398,6 +475,29 @@ def delete(tree: list, key: int, p: int = 0):
     :return:
     """
     parent = (0, 0)
+    if tree[0] == key:
+        if tree[0].son is None and tree[0].daughter is None:
+            tree[0].value = None
+        elif tree[0].son is None:
+            tree[0].value = tree[tree[0].daughter].value
+            tree[0].son = tree[tree[0].daughter].son
+            tree[0].daughter = tree[tree[0].daughter].daughter
+        elif tree[0].daughter is None:
+            tree[0].value = tree[tree[0].son].value
+            tree[0].daughter = tree[tree[0].son].daughter
+            tree[0].son = tree[tree[0].son].son
+        else:
+            if tree[tree[0].daughter].son is None:
+                tree[0].value = tree[tree[0].daughter].value
+                tree[0].daughter = tree[tree[0].daughter].daughter
+            else:
+                s, sp = 0, 0
+                for i in lowest(tree, p=tree[p].daughter):
+                    sp = s
+                    s = i
+                tree[0].value = tree[s].value
+                tree[sp].son = tree[s].daughter
+        return
     while True:
         if tree[p].value == key:
             if tree[p].son is None and tree[p].daughter is None:
@@ -407,10 +507,16 @@ def delete(tree: list, key: int, p: int = 0):
             elif tree[p].daughter is None:
                 connect(tree, parent[0], tree[p].son, parent[1])
             else:
-                s = lowest(tree, p=tree[p].daughter)[-1]
-                sp = lowest(tree, p=tree[p].daughter)[-2]
-                tree[p].value = tree[s].value
-                delete(tree, tree[s].value, sp)
+                if tree[tree[p].daughter].son is None:
+                    tree[p].value = tree[tree[p].daughter].value
+                    tree[p].daughter = tree[tree[p].daughter].daughter
+                else:
+                    s, sp = 0, 0
+                    for i in lowest(tree, p=tree[p].daughter):
+                        sp = s
+                        s = i
+                    tree[p].value = tree[s].value
+                    tree[sp].son = tree[s].daughter
             break
         elif key < tree[p].value and tree[p].son is not None:
             parent = (p, 0)
@@ -421,6 +527,76 @@ def delete(tree: list, key: int, p: int = 0):
         else:
             print(f'There is no node with given {key} key')
             break
+
+
+def deleteavl(tree: list, key: int, p: int = 0):
+    """
+    Delete a node
+    :param list tree:
+    :param int key:
+    :param int p:
+    :return:
+    :rtype: bool
+    """
+    parent = (0, 0)
+    if tree[0] == key:
+        if tree[0].son is None and tree[0].daughter is None:
+            tree[0].value = None
+        elif tree[0].son is None:
+            tree[0].value = tree[tree[0].daughter].value
+            tree[0].son = tree[tree[0].daughter].son
+            tree[0].daughter = tree[tree[0].daughter].daughter
+        elif tree[0].daughter is None:
+            tree[0].value = tree[tree[0].son].value
+            tree[0].daughter = tree[tree[0].son].daughter
+            tree[0].son = tree[tree[0].son].son
+        else:
+            if tree[tree[0].daughter].son is None:
+                tree[0].value = tree[tree[0].daughter].value
+                tree[0].daughter = tree[tree[0].daughter].daughter
+            else:
+                s, sp = 0, 0
+                for i in lowest(tree, p=tree[p].daughter):
+                    tree[i].balance -= 1
+                    sp = s
+                    s = i
+                tree[0].value = tree[s].value
+                tree[sp].son = tree[s].daughter
+            tree[p].balance += 1
+        return True
+    while True:
+        if tree[p].value == key:
+            if tree[p].son is None and tree[p].daughter is None:
+                connect(tree, parent[0], None, parent[1])
+            elif tree[p].son is None:
+                connect(tree, parent[0], tree[p].daughter, parent[1])
+            elif tree[p].daughter is None:
+                connect(tree, parent[0], tree[p].son, parent[1])
+            else:
+                if tree[tree[p].daughter].son is None:
+                    tree[p].value = tree[tree[p].daughter].value
+                    tree[p].daughter = tree[tree[p].daughter].daughter
+                else:
+                    s, sp = 0, 0
+                    for i in lowest(tree, p=tree[p].daughter):
+                        tree[i].balance -= 1
+                        sp = s
+                        s = i
+                    tree[p].value = tree[s].value
+                    tree[sp].son = tree[s].daughter
+                tree[p].balance += 1
+            return True
+        elif key < tree[p].value and tree[p].son is not None:
+            parent = (p, 0)
+            tree[p].balance -= 1
+            p = tree[p].son
+        elif tree[p].daughter is not None:
+            parent = (p, 1)
+            tree[p].balance += 1
+            p = tree[p].daughter
+        else:
+            print(f'There is no node with given {key} key')
+            return False
 
 
 @cmd.addtoswitch(switch=handler.commands, name='del')
@@ -444,7 +620,83 @@ def mydel(handler: Handler, tree: list, times: int):
                 print('Key must be an int')
             else:
                 break
-        delete(tree, key)
+        if isinstance(tree[0], AVLnode):
+            backup = copy.deepcopy(tree)
+            if deleteavl(tree, key):
+                balancer(tree)
+            else:
+                tree = backup
+        else:
+            deletebst(tree, key)
+
+
+def right(tree: list, p: int):
+    """
+    right
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    node = BSTnode(tree[p].value, tree[p].son, tree[p].daughter)
+    pointer = tree[p].son
+    tree[p].value = tree[pointer].value
+    tree[p].son = tree[pointer].son
+    tree[pointer].son = tree[pointer].daughter
+    tree[pointer].daughter = node.daughter
+    tree[pointer].value = node.value
+    tree[p].daughter = pointer
+
+
+def left(tree: list, p: int):
+    """
+    left
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    node = BSTnode(tree[p].value, tree[p].son, tree[p].daughter)
+    pointer = tree[p].daughter
+    tree[p].value = tree[pointer].value
+    tree[p].daughter = tree[pointer].daughter
+    tree[pointer].daughter = tree[pointer].son
+    tree[pointer].son = node.son
+    tree[pointer].value = node.value
+    tree[p].son = pointer
+
+
+@cmd.addtoswitch(switch=handler.commands)
+@use_userdata(source='usertree.pkl', target='usertree.pkl')
+@cmd.correctness
+@cmd.addtoswitch(switch=handler.algorythms)
+def dsw(handler: Handler, tree: list):
+    """
+    Balance bst tree
+    :param Handler handler:
+    :param Handler tree:
+    :return:
+    """
+    if isinstance(tree[0], AVLnode):
+        print('Tree must contain BST nodes only.')
+        return
+    p = 0
+    l = 0
+    while p is not None:
+        if tree[p].son is not None:
+            right(tree, p)
+        else:
+            p = tree[p].daughter
+            l += 1
+    p = 0
+    m = 2**(int(math.log(l + 1, 2))) - 1
+    for _ in range(l - m):
+        left(tree, p)
+        p = tree[p].daughter
+    while m > 1:
+        p = 0
+        m //= 2
+        for _ in range(m):
+            left(tree, p)
+            p = tree[p].daughter
 
 
 if __name__ == '__main__':
