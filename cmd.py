@@ -124,7 +124,7 @@ def chelp(controller: Controller, command: str = None):
     elif (func := controller.commands.get(command)) is not None:
         print(f'''{command} command
 Usage: command, params marked as user specified, optional params in format [name] value
-Example: printtree in_order _e yes''')
+Example: printtree in_order _e True''')
         print(func.__doc__)
     else:
         print(f'Command {command} is not an available command, type list to see the list of available commands')
@@ -150,6 +150,10 @@ def detector(charray: str):
     :param str charray:
     :return:
     """
+    if charray == 'False':
+        return False
+    if charray == 'True':
+        return True
     if re.match('\[([0-9]+,)*[0-9]+\]', charray):
         arr = [int(i) for i in re.findall('[0-9]+', charray)]
         return arr

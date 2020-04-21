@@ -45,18 +45,18 @@ handler = Handler()
 handler.commands = cmd.controller.commands
 
 
-def use_userdata(_func: types.FunctionType = None, *, source: str = None, target: str = None):
+def iofiles(_func: types.FunctionType = None, *, source: str = None, target: str = None):
     """
-    Makes algorythm use arr from userdata.json
+    Makes algorythm use data from source and save it to target.
     :param types.FunctionType func:
     :param str source: source file
     :param str target: target file
     :return: decorated function
     :rtype: types.FunctionType
     """
-    def decorator_use_userdata(func):
+    def decorator_iofiles(func):
         @functools.wraps(func)
-        def wrapper_use_userdata(handler: Handler, *args, **kwargs):
+        def wrapper_iofiles(handler: Handler, *args, **kwargs):
             if not os.path.isfile(source):
                 print('Generate or enter the data first.')
                 return
@@ -75,11 +75,11 @@ def use_userdata(_func: types.FunctionType = None, *, source: str = None, target
                     print(f'{_type.group()} extension is not available')
                 handler.writemodes[_type.group()](data, target)
             print(f'{func.__name__} finished successfully')
-        return wrapper_use_userdata
+        return wrapper_iofiles
     if _func is None:
-        return decorator_use_userdata
+        return decorator_iofiles
     else:
-        return decorator_use_userdata(_func)
+        return decorator_iofiles(_func)
 
 
 def availability(_func: types.FunctionType = None, *, toggle: dict, name: str):
@@ -116,7 +116,7 @@ def pklread(source: str):
 @cmd.addtoswitch(switch=handler.readmodes, name='.json')
 def jsonread(source: str):
     """
-    Read from json file
+    Reads from json file
     :param str source:
     :return:
     """
@@ -146,7 +146,45 @@ def jsonwrite(object, target: str):
     :return:
     """
     with open(target, 'w') as goal:
-        json.dump(object, target)
+        json.dump(object, goal)
+
+
+@cmd.addtoswitch(switch=handler.commands, name='settings')
+@iofiles(source='settings.json', target='settings.json')
+@cmd.correctness
+def mysettings(handler: Handler, settings: dict):
+    """
+    Shows current settings
+    :param Handler handler:
+    :param dict settings:
+    :return:
+    """
+    print('Current settings:')
+    for i, key in enumerate(sorted((settings))):
+        if i%2 == 0:
+            print(f'{key:10} -> {settings[key]}')
+        else:
+            print(settings[key])
+
+
+
+@cmd.addtoswitch(switch=handler.commands, name='set')
+@iofiles(source='settings.json', target='settings.json')
+@cmd.correctness
+def myset(handler: Handler, settings: dict, key: str, value: int):
+    """
+    Allows to change setting value
+    :param Handler handler:
+    :param dict settings:
+    :param str key: User specified
+    :param int value: User specified
+    :return:
+    """
+    if settings.get(key) is None:
+        print(f'{key} setting not found')
+        return
+    if key == 'upperlimit' and (value < 20 or value % 10 != 0):
+        print('Upperlimit must be a multiple of 10 and must be higher than 10.')
 
 
 @cmd.addtoswitch(switch=handler.commands)
@@ -165,7 +203,7 @@ def enterdata(handler: Handler, arr: list):
 
 @cmd.addtoswitch(switch=handler.commands)
 @cmd.correctness
-def gendata(handler: Handler, lenght: int):
+def genarr(handler: Handler, lenght: int):
     """
     Generates test arr
     :param Toggle toggle:
@@ -245,7 +283,7 @@ def post_order(tree: list, p: int):
 
 
 @cmd.addtoswitch(switch=handler.commands)
-@use_userdata(source='userdata.json', target='usertree.pkl')
+@iofiles(source='userdata.json', target='usertree.pkl')
 @cmd.addtoswitch(switch=handler.algorythms)
 def genbst(handler: Handler, arr: list):
     """
@@ -370,7 +408,7 @@ def createavl(tree: list, start: int, stop: int):
 
 
 @cmd.addtoswitch(switch=handler.commands)
-@use_userdata(source='userdata.json', target='usertree.pkl')
+@iofiles(source='userdata.json', target='usertree.pkl')
 @cmd.addtoswitch(switch=handler.algorythms)
 def genavl(handler: Handler, arr: list):
     """
@@ -388,21 +426,21 @@ def genavl(handler: Handler, arr: list):
 
 @cmd.addtoswitch(switch=handler.commands)
 @availability(toggle=handler.orders, name='methods')
-@use_userdata(source='usertree.pkl')
+@iofiles(source='usertree.pkl')
 @cmd.correctness
-def printtree(handler: Handler, tree: list, method: str, *, _e: str = 'no'):
+def printtree(handler: Handler, tree: list, method: str, *, _e: bool = False):
     """
     Prints contents of the tree
     :param Handler handler:
     :param list tree:
     :param str method: User specified
-    :param str _e: User specified, optional, extended node view, yes or no
+    :param str _e: User specified, optional, extended node view, True or False
     :return:
     """
     if (iterator := handler.orders.get(method)) is None:
         print(f'{method} method is not available')
     else:
-        if _e == 'yes':
+        if _e:
             for key in iterator(tree, 0):
                 print(f'{key}', repr(tree[key]))
         else:
@@ -432,7 +470,7 @@ def largest(tree: list, p: int = 0):
 
 @cmd.addtoswitch(switch=handler.commands)
 @availability(toggle=handler.kinds, name='methods')
-@use_userdata(source='usertree.pkl')
+@iofiles(source='usertree.pkl')
 @cmd.correctness
 def find(handler: Handler, tree: list, method: str):
     """
@@ -600,7 +638,7 @@ def deleteavl(tree: list, key: int, p: int = 0):
 
 
 @cmd.addtoswitch(switch=handler.commands, name='del')
-@use_userdata(source='usertree.pkl', target='usertree.pkl')
+@iofiles(source='usertree.pkl', target='usertree.pkl')
 @cmd.correctness
 def mydel(handler: Handler, tree: list, times: int):
     """
@@ -665,7 +703,7 @@ def left(tree: list, p: int):
 
 
 @cmd.addtoswitch(switch=handler.commands)
-@use_userdata(source='usertree.pkl', target='usertree.pkl')
+@iofiles(source='usertree.pkl', target='usertree.pkl')
 @cmd.correctness
 @cmd.addtoswitch(switch=handler.algorythms)
 def dsw(handler: Handler, tree: list):
@@ -700,5 +738,9 @@ def dsw(handler: Handler, tree: list):
 
 
 if __name__ == '__main__':
+    if not os.path.isfile('settings.json'):
+        jsonwrite({'upperlimit': 100,
+                   'upperlimit!':'Lenght of the longest list to be generated, \
+                    must be a multiple of 10, must be higher than 10.'}, 'settings.json')
     print('Forester by Jakub Błażejowski', 'Type list to see the list of available commands.', sep='\n')
     cmd.main(handler)
