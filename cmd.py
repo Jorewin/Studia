@@ -52,6 +52,8 @@ def correctness(func: types.FunctionType) -> types.FunctionType:
     @functools.wraps(func)
     def wrapper_correctness(*args, **kwargs):
         checklist = {arg: 0 for arg in func.__annotations__}
+        if checklist.get('return') is not None:
+            checklist['return'] = 1
         for kwarg in kwargs:
             if (_type := func.__annotations__.get(kwarg)) is None:
                 print(f'{func.__name__} got an unexpected argument {kwarg}')
@@ -77,7 +79,8 @@ def correctness(func: types.FunctionType) -> types.FunctionType:
                 counter += 1
             else:
                 if counter == len(args):
-                    func(*args, **kwargs)
+                    if (result := func(*args, **kwargs)) is not None:
+                        print(result)
                 else:
                     print(f'{func.__name__}, too many arguments were given')
     return wrapper_correctness
@@ -85,16 +88,18 @@ def correctness(func: types.FunctionType) -> types.FunctionType:
 
 @addtoswitch(switch=controller.commands, name='list')
 @correctness
-def clist(controller: Controller):
+def clist(controller: Controller) -> str:
     """
     Used to generate list of available commands
     :param Controller controller:
-    :return:
+    :return: result
+    :rtype: str
     """
-    print('Available commands:')
+    result = ['Available commands:']
     for command in controller.commands:
-        print(f'\t+ {command:20} -> {controller.commands[command].__name__}')
-    print('Type help [command_name] to get more info about specific command')
+        result.append(f'\t+ {command:20} -> {controller.commands[command].__name__}')
+    result.append('Type help [command_name] to get more info about specific command')
+    return '\n'.join(result)
 
 
 @addtoswitch(switch=controller.commands, name='exit')
@@ -111,23 +116,26 @@ def cexit(controller: Controller):
 
 @addtoswitch(switch=controller.commands, name='help')
 @correctness
-def chelp(controller: Controller, command: str = None):
+def chelp(controller: Controller, command: str = None) -> str:
     """
     Shows documentation of the chosen command
     :param Controller controller:
     :param command: User specified
     :type command: None or str
     :return:
+    :rtype: str
     """
+    result = ''
     if command is None:
-        print('Type help [command_name] to get more info about specific command')
+        return 'Type help [command_name] to get more info about specific command'
     elif (func := controller.commands.get(command)) is not None:
-        print(f'''{command} command
+        result += f'''{command} command
 Usage: command, params marked as user specified, optional params in format [name] value
-Example: printtree in_order _e True''')
-        print(func.__doc__)
+Example: printtree in_order _e True'''
+        result += func.__doc__
+        return result
     else:
-        print(f'Command {command} is not an available command, type list to see the list of available commands')
+        return f'Command {command} is not an available command, type list to see the list of available commands'
 
 
 @addtoswitch(switch=controller.commands, name='clear')
