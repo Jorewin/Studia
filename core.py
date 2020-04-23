@@ -483,7 +483,7 @@ def printdata(handler: Handler) -> str:
 @cmd.addtoswitch(switch=handler.orders)
 def pre_order(tree: list, p: int):
     """
-    Yields keys of the tree
+    Returns keys of the tree
     :param list tree:
     :param int p:
     :return:
@@ -494,6 +494,25 @@ def pre_order(tree: list, p: int):
     if tree[p].daughter is not None:
         right = pre_order(tree, tree[p].daughter)
     return [p] + left + right
+
+
+@cmd.addtoswitch(switch=handler.orders)
+def pre_order2(tree: list, p: int):
+    """
+    Returns keys of the tree
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    arr = [0]
+    i = 0
+    while i < len(arr):
+        if tree[arr[i]].daughter is not None:
+            arr.insert(i+1, tree[arr[i]].daughter)
+        if tree[arr[i]].son is not None:
+            arr.insert(i+1, tree[arr[i]].son)
+        i += 1
+    return arr
 
 
 @cmd.addtoswitch(switch=handler.orders)
@@ -511,6 +530,27 @@ def in_order(tree: list, p: int):
     if tree[p].daughter is not None:
         right = in_order(tree, tree[p].daughter)
     return left + [p] + right
+
+
+@cmd.addtoswitch(switch=handler.orders)
+@cmd.addtoswitch(switch=handler.algorythms)
+def in_order2(tree: list, p: int):
+    """
+    Returns keys of the tree
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    arr = [0]
+    i = 0
+    while i < len(arr):
+        if tree[arr[i]].son is not None:
+            arr.insert(i, tree[arr[i]].son)
+            continue
+        if tree[arr[i]].daughter is not None:
+            arr.insert(i + 1, tree[arr[i]].daughter)
+        i += 1
+    return arr
 
 
 @cmd.addtoswitch(switch=handler.orders)
@@ -582,6 +622,32 @@ def RR(tree: list, p: int):
     tree[p].son = pointer
 
 
+def RL(tree: list, p: int):
+    """
+    RL
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    node = AVLnode(tree[p].value, tree[p].son, tree[p].daughter, tree[p].balance)
+    pointer = tree[tree[p].daughter].son
+    tree[p].value = tree[pointer].value
+    tree[p].balance = 0
+    tree[tree[p].daughter].son = tree[pointer].daughter
+    if tree[pointer].balance == 1:
+        tree[tree[p].daughter].balance = -1
+    else:
+        tree[tree[p].daughter].balance = 0
+    tree[pointer].daughter = tree[pointer].son
+    tree[pointer].son = node.son
+    tree[pointer].value = node.value
+    if tree[pointer].balance == -1:
+        tree[pointer].balance = 1
+    else:
+        tree[pointer].balance = 0
+    tree[p].son = pointer
+
+
 def LL(tree: list, p: int):
     """
     LL
@@ -598,6 +664,32 @@ def LL(tree: list, p: int):
     tree[pointer].daughter = node.daughter
     tree[pointer].value = node.value
     tree[pointer].balance = node.balance - tree[pointer].balance - 1
+    tree[p].daughter = pointer
+
+
+def LR(tree: list, p: int):
+    """
+    LR
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    node = AVLnode(tree[p].value, tree[p].son, tree[p].daughter, tree[p].balance)
+    pointer = tree[tree[p].son].daughter
+    tree[p].value = tree[pointer].value
+    tree[p].balance = 0
+    tree[tree[p].son].daughter = tree[pointer].son
+    if tree[pointer].balance == -1:
+        tree[tree[p].son].balance = 1
+    else:
+        tree[tree[p].son].balance = 0
+    tree[pointer].son = tree[pointer].daughter
+    tree[pointer].daughter = node.daughter
+    tree[pointer].value = node.value
+    if tree[pointer].balance == 1:
+        tree[pointer].balance = -1
+    else:
+        tree[pointer].balance = 0
     tree[p].daughter = pointer
 
 
@@ -623,6 +715,26 @@ def balancer(tree: list):
                     LL(tree, p)
 
 
+def balancer2(tree: list, p: int):
+    """
+    Balances the AVL tree
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    while abs(tree[p].balance) > 1:
+        if tree[p].balance < -1:
+            if tree[tree[p].daughter].balance <= 0:
+                RR(tree, p)
+            else:
+                RL(tree, p)
+        elif tree[p].balance > 1:
+            if tree[tree[p].son].balance >= 0:
+                LL(tree, p)
+            else:
+                LR(tree, p)
+
+
 def createavl(tree: list, start: int, stop: int):
     """
     Recursive function
@@ -636,23 +748,52 @@ def createavl(tree: list, start: int, stop: int):
     key = (start + stop) // 2
     node = AVLnode(tree[key])
     tree[key] = node
+    path = []
     p = 0
     while True:
+        path.insert(0, p)
         if tree[key].value < tree[p].value:
-            tree[p].balance += 1
             if tree[p].son is None:
                 tree[p].son = key
                 break
             else:
                 p = tree[p].son
         else:
-            tree[p].balance -= 1
             if tree[p].daughter is None:
                 tree[p].daughter = key
                 break
             else:
                 p = tree[p].daughter
-    balancer(tree)
+    p = key
+    if tree[arr[0]].balance != 0:
+        tree[arr[0]].balance = 0
+        return
+    if tree[arr[0]].son == p:
+        tree[arr[0]].balance = 1
+    else:
+        tree[arr[0]].balance = -1
+    p = arr[0]
+    r = 0
+    for i in path[1::]:
+        if tree[p].balance == 0:
+            r = i
+            break
+        if tree[i].son == p:
+            tree[i].balance += 1
+        else:
+            tree[i].balance -= 1
+        p = i
+    else:
+        return
+    if tree[r].balance == -1:
+        if tree[r].left == p:
+            tree[r].balance = 0
+        elif tree[p].balance = 1:
+            RL(tree, r)
+        else:
+            RR(tree, r)
+    else:
+        pass
     createavl(tree, start, key - 1)
     createavl(tree, key + 1, stop)
 
