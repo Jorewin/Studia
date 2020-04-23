@@ -290,7 +290,7 @@ def processdata(handler: Handler, settings: dict, *, _t: str = None) -> str:
             iteration += 1
 
             def printer():
-                handler.algorythms['in_order'](tree, 0)
+                handler.algorythms['in_order2'](tree, 0)
 
             time = timeit.timeit(stmt=printer, number=10)
             time /= 10
@@ -344,7 +344,7 @@ def processdata(handler: Handler, settings: dict, *, _t: str = None) -> str:
             iteration += 1
 
             def printer():
-                handler.algorythms['in_order'](tree, 0)
+                handler.algorythms['in_order2'](tree, 0)
 
             time = timeit.timeit(stmt=printer, number=10)
             time /= 10
@@ -542,14 +542,17 @@ def in_order2(tree: list, p: int):
     :return:
     """
     arr = [0]
+    checklist = [0 for _ in range(len(tree))]
     i = 0
     while i < len(arr):
-        if tree[arr[i]].son is not None:
-            arr.insert(i, tree[arr[i]].son)
+        if checklist[arr[i]] == 1:
+            i += 1
             continue
+        checklist[arr[i]] = 1
         if tree[arr[i]].daughter is not None:
             arr.insert(i + 1, tree[arr[i]].daughter)
-        i += 1
+        if tree[arr[i]].son is not None:
+            arr.insert(i, tree[arr[i]].son)
     return arr
 
 
@@ -735,6 +738,43 @@ def balancer2(tree: list, p: int):
                 LR(tree, p)
 
 
+def inner(tree: list, path: list, p: int):
+    if tree[path[0]].balance != 0:
+        tree[path[0]].balance = 0
+        return
+    if tree[path[0]].son == p:
+        tree[path[0]].balance = 1
+    else:
+        tree[path[0]].balance = -1
+    p = path[0]
+    r = 0
+    for i in path[1::]:
+        if tree[i].balance != 0:
+            r = i
+            break
+        if tree[i].son == p:
+            tree[i].balance += 1
+        else:
+            tree[i].balance -= 1
+        p = i
+    else:
+        return
+    if tree[r].balance == -1:
+        if tree[r].son == p:
+            tree[r].balance = 0
+        elif tree[p].balance == 1:
+            RL(tree, r)
+        else:
+            RR(tree, r)
+    else:
+        if tree[r].daughter == p:
+            tree[r].balance = 0
+        elif tree[p].balance == -1:
+            LR(tree, r)
+        else:
+            LL(tree, r)
+
+
 def createavl(tree: list, start: int, stop: int):
     """
     Recursive function
@@ -764,36 +804,7 @@ def createavl(tree: list, start: int, stop: int):
                 break
             else:
                 p = tree[p].daughter
-    p = key
-    if tree[arr[0]].balance != 0:
-        tree[arr[0]].balance = 0
-        return
-    if tree[arr[0]].son == p:
-        tree[arr[0]].balance = 1
-    else:
-        tree[arr[0]].balance = -1
-    p = arr[0]
-    r = 0
-    for i in path[1::]:
-        if tree[p].balance == 0:
-            r = i
-            break
-        if tree[i].son == p:
-            tree[i].balance += 1
-        else:
-            tree[i].balance -= 1
-        p = i
-    else:
-        return
-    if tree[r].balance == -1:
-        if tree[r].left == p:
-            tree[r].balance = 0
-        elif tree[p].balance = 1:
-            RL(tree, r)
-        else:
-            RR(tree, r)
-    else:
-        pass
+    inner(tree, path, key)
     createavl(tree, start, key - 1)
     createavl(tree, key + 1, stop)
 
