@@ -165,13 +165,10 @@ def detector(charray: str):
     if re.match('\[([0-9]+,)*[0-9]+\]', charray):
         arr = [int(i) for i in re.findall('[0-9]+', charray)]
         return arr
-    try:
-        value = int(charray)
-    except ValueError:
-        pass
+    if re.match('^[0-9]+$', charray):
+        return int(charray)
     else:
-        return value
-    return charray
+        return charray
 
 
 def main(controller: Controller):

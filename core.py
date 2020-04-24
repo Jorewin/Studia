@@ -431,6 +431,77 @@ def plotdata(handler: Handler, settings: dict, *, _l: bool = False) -> str:
     plt.savefig(f'figures/{time}/DSW')
     plt.clf()
 
+    shutil.copytree('processeddata', f'figures/{time}/processeddata')
+
+
+@cmd.addtoswitch(switch=handler.commands)
+@cmd.correctness
+def replot(handler: Handler, time: str, *, _l: bool = False) -> str:
+    """
+    Plots data
+    :param handler:
+    :param str time: User specified, H_M_S
+    :param _l: User specified, optional, sets scale of the x axis to log
+    :return:
+    """
+    if not os.path.isdir(f'figures/{time}'):
+        return f'folder {time} doesn\'t exist'
+    settings = jsonread(f'figures/{time}/processeddata/settings.json')
+    x = numpy.arange(10, settings['upperlimit'], settings['upperlimit'] // 10)
+    if not settings['BST']:
+        return 'BST data not generated'
+    if not settings['BST']:
+        return 'AVL data not generated'
+
+    #Constructing
+    y = numpy.loadtxt(f'figures/{time}/processeddata/bst_creating.csv')
+    plt.plot(x, y, marker='o', label='BST')
+    y = numpy.loadtxt(f'figures/{time}/processeddata/avl_creating.csv')
+    plt.plot(x, y, marker='o', label='AVL')
+    plt.title('Tree construction')
+    plt.legend()
+    plt.xlabel('Lenght of the test case')
+    plt.ylabel('Time [s]')
+    plt.grid(True)
+    plt.savefig(f'figures/{time}/Constructing.png')
+    plt.clf()
+
+    #Finding
+    y = numpy.loadtxt(f'figures/{time}/processeddata/bst_finding.csv')
+    plt.plot(x, y, marker='o', label='BST')
+    y = numpy.loadtxt(f'figures/{time}/processeddata/avl_finding.csv')
+    plt.plot(x, y, marker='o', label='AVL')
+    plt.title('Finding the lowest element')
+    plt.legend()
+    plt.xlabel('Lenght of the test case')
+    plt.ylabel('Time [s]')
+    plt.grid(True)
+    plt.savefig(f'figures/{time}/Finding.png')
+    plt.clf()
+
+    #Printing
+    y = numpy.loadtxt(f'figures/{time}/processeddata/bst_printing.csv')
+    plt.plot(x, y, marker='o', label='BST')
+    y = numpy.loadtxt(f'figures/{time}/processeddata/avl_printing.csv')
+    plt.plot(x, y, marker='o', label='AVL')
+    plt.title('Printing elements in order')
+    plt.legend()
+    plt.xlabel('Lenght of the test case')
+    plt.ylabel('Time [s]')
+    plt.grid(True)
+    plt.savefig(f'figures/{time}/Printing')
+    plt.clf()
+
+    #DSW
+    y = numpy.loadtxt(f'figures/{time}/processeddata/bst_DSW.csv')
+    plt.plot(x, y, marker='o')
+    plt.title('DSW algorythm')
+    plt.xlabel('Lenght of the test case')
+    plt.ylabel('Time [s]')
+    plt.grid(True)
+    plt.savefig(f'figures/{time}/DSW')
+    plt.clf()
+
 
 @cmd.addtoswitch(switch=handler.commands)
 @cmd.correctness
@@ -467,7 +538,7 @@ def genarr(handler: Handler, lenght: int) -> str:
 
 @cmd.addtoswitch(switch=handler.commands)
 @cmd.correctness
-def printdata(handler: Handler) -> str:
+def printarr(handler: Handler) -> str:
     """
     Prints data from userdata.json if the file exists
     :param Handler handler:
