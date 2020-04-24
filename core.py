@@ -261,22 +261,23 @@ def processdata(handler: Handler, settings: dict, *, _t: str = None) -> str:
     settings['BST'] = False
     settings['AVL'] = False
     if _t is None or _t == 'BST':
-        total = 40
+        total = 60
         iteration = 0
         printProgressBar(iteration, total)
-        creating, finding, printing, DSW = [], [], [], []
+        creating, finding, printing, DSW, nprinting, nfinding = [], [], [], [], [], []
         for i in range(10, settings['upperlimit'] + 1, settings['upperlimit'] // 10):
             iteration += 1
 
-            def create():
-                tree = jsonread(f'data/{i}.json')
-                handler.algorythms['genbst'](handler, tree)
+            # def create():
+            #     tree = jsonread(f'data/{i}.json')
+            #     handler.algorythms['genbst'](handler, tree)
 
             tree = jsonread(f'data/{i}.json')
-            handler.algorythms['genbst'](handler, tree)
-            time = timeit.timeit(stmt=create, number=10)
-            time /= 10
-            creating.append(time)
+            devcreate(tree)
+            # handler.algorythms['genbst'](handler, tree)
+            # time = timeit.timeit(stmt=create, number=10)
+            # time /= 10
+            # creating.append(time)
             printProgressBar(iteration, total)
             iteration += 1
 
@@ -305,15 +306,40 @@ def processdata(handler: Handler, settings: dict, *, _t: str = None) -> str:
             time /= 10
             DSW.append(time)
             printProgressBar(iteration, total)
-        creating = numpy.asarray(creating)
-        numpy.savetxt('processeddata/bst_creating.csv', creating, delimiter=',')
+            iteration += 1
+
+            handler.algorythms['dsw'](handler, tree)
+
+            def finder():
+                handler.algorythms['find'](handler, tree, 'lowest')
+
+            time = timeit.timeit(stmt=finder, number=10)
+            time /= 10
+            nfinding.append(time)
+            printProgressBar(iteration, total)
+            iteration += 1
+
+            def printer():
+                handler.algorythms['in_order2'](tree, 0)
+
+            time = timeit.timeit(stmt=printer, number=10)
+            time /= 10
+            nprinting.append(time)
+            printProgressBar(iteration, total)
+        # creating = numpy.asarray(creating)
+        # numpy.savetxt('processeddata/bst_creating.csv', creating, delimiter=',')
         finding = numpy.asarray(finding)
         numpy.savetxt('processeddata/bst_finding.csv', finding, delimiter=',')
         printing = numpy.asarray(printing)
         numpy.savetxt('processeddata/bst_printing.csv', printing, delimiter=',')
         DSW = numpy.asarray(DSW)
         numpy.savetxt(f'processeddata/bst_DSW.csv', DSW, delimiter=',')
+        nfinding = numpy.asarray(nfinding)
+        numpy.savetxt('processeddata/dsw_bst_finding.csv', nfinding, delimiter=',')
+        nprinting = numpy.asarray(nprinting)
+        numpy.savetxt('processeddata/dsw_bst_printing.csv', nprinting, delimiter=',')
         settings['BST'] = True
+
     if _t is None or _t == 'AVL':
         total = 30
         iteration = 0
@@ -374,6 +400,9 @@ def plotdata(handler: Handler, settings: dict, *, _l: bool = False) -> str:
     :param _l: User specified, optional, sets scale of the x axis to log
     :return:
     """
+    name = ''
+    if _l:
+        name = 'log_'
     time = datetime.datetime.now().strftime("%H_%M_%S")
     os.mkdir(f'figures/{time}')
     x = numpy.arange(10, settings['upperlimit'], settings['upperlimit'] // 10)
@@ -392,7 +421,9 @@ def plotdata(handler: Handler, settings: dict, *, _l: bool = False) -> str:
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/Constructing.png')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}Constructing.png')
     plt.clf()
 
     #Finding
@@ -400,12 +431,16 @@ def plotdata(handler: Handler, settings: dict, *, _l: bool = False) -> str:
     plt.plot(x, y, marker='o', label='BST')
     y = numpy.loadtxt('processeddata/avl_finding.csv')
     plt.plot(x, y, marker='o', label='AVL')
+    y = numpy.loadtxt('processeddata/dsw_bst_finding.csv')
+    plt.plot(x, y, marker='o', label='balanced_BST')
     plt.title('Finding the lowest element')
     plt.legend()
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/Finding.png')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}Finding.png')
     plt.clf()
 
     #Printing
@@ -413,12 +448,16 @@ def plotdata(handler: Handler, settings: dict, *, _l: bool = False) -> str:
     plt.plot(x, y, marker='o', label='BST')
     y = numpy.loadtxt('processeddata/avl_printing.csv')
     plt.plot(x, y, marker='o', label='AVL')
+    y = numpy.loadtxt('processeddata/dsw_bst_printing.csv')
+    plt.plot(x, y, marker='o', label='balanced_BST')
     plt.title('Printing elements in order')
     plt.legend()
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/Printing')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}Printing.png')
     plt.clf()
 
     #DSW
@@ -428,10 +467,19 @@ def plotdata(handler: Handler, settings: dict, *, _l: bool = False) -> str:
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/DSW')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}DSW.png')
     plt.clf()
 
     shutil.copytree('processeddata', f'figures/{time}/processeddata')
+
+
+def devcreate(tree: list):
+    for i in range(len(tree)):
+        tree[i] = BSTnode(tree[i], son=i + 1)
+    else:
+        tree[-1].son = None
 
 
 @cmd.addtoswitch(switch=handler.commands)
@@ -447,6 +495,9 @@ def replot(handler: Handler, time: str, *, _l: bool = False) -> str:
     if not os.path.isdir(f'figures/{time}'):
         return f'folder {time} doesn\'t exist'
     settings = jsonread(f'figures/{time}/processeddata/settings.json')
+    name = ''
+    if _l:
+        name = 'log_'
     x = numpy.arange(10, settings['upperlimit'], settings['upperlimit'] // 10)
     if not settings['BST']:
         return 'BST data not generated'
@@ -463,7 +514,9 @@ def replot(handler: Handler, time: str, *, _l: bool = False) -> str:
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/Constructing.png')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}Constructing.png')
     plt.clf()
 
     #Finding
@@ -471,12 +524,16 @@ def replot(handler: Handler, time: str, *, _l: bool = False) -> str:
     plt.plot(x, y, marker='o', label='BST')
     y = numpy.loadtxt(f'figures/{time}/processeddata/avl_finding.csv')
     plt.plot(x, y, marker='o', label='AVL')
+    y = numpy.loadtxt(f'figures/{time}/processeddata/dsw_bst_finding.csv')
+    plt.plot(x, y, marker='o', label='balanced_BST')
     plt.title('Finding the lowest element')
     plt.legend()
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/Finding.png')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}Finding.png')
     plt.clf()
 
     #Printing
@@ -484,12 +541,16 @@ def replot(handler: Handler, time: str, *, _l: bool = False) -> str:
     plt.plot(x, y, marker='o', label='BST')
     y = numpy.loadtxt(f'figures/{time}/processeddata/avl_printing.csv')
     plt.plot(x, y, marker='o', label='AVL')
+    y = numpy.loadtxt(f'figures/{time}/processeddata/dsw_bst_printing.csv')
+    plt.plot(x, y, marker='o', label='balanced_BST')
     plt.title('Printing elements in order')
     plt.legend()
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/Printing')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}Printing.png')
     plt.clf()
 
     #DSW
@@ -499,7 +560,9 @@ def replot(handler: Handler, time: str, *, _l: bool = False) -> str:
     plt.xlabel('Lenght of the test case')
     plt.ylabel('Time [s]')
     plt.grid(True)
-    plt.savefig(f'figures/{time}/DSW')
+    if _l:
+        plt.yscale('log')
+    plt.savefig(f'figures/{time}/{name}DSW.png')
     plt.clf()
 
 
