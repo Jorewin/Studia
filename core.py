@@ -1033,58 +1033,72 @@ def deletebst(tree: list, key: int, p: int = 0) -> bool:
     :param list tree:
     :param int key:
     :param int p:
-    :return: finished successfully
+    :return:
     :rtype: bool
     """
-    parent = (0, 0)
+    path = []
     if tree[0] == key:
         if tree[0].son is None and tree[0].daughter is None:
             tree[0].value = None
+            return True
         elif tree[0].son is None:
             tree[0].value = tree[tree[0].daughter].value
             tree[0].son = tree[tree[0].daughter].son
             tree[0].daughter = tree[tree[0].daughter].daughter
+            p = tree[0].daughter
         elif tree[0].daughter is None:
             tree[0].value = tree[tree[0].son].value
             tree[0].daughter = tree[tree[0].son].daughter
             tree[0].son = tree[tree[0].son].son
+            p = tree[0].son
         else:
+            path = [0]
             if tree[tree[0].daughter].son is None:
                 tree[0].value = tree[tree[0].daughter].value
                 tree[0].daughter = tree[tree[0].daughter].daughter
+                p = tree[0].daughter
             else:
-                s, sp = 0, 0
-                for i in lowest(tree, p=tree[p].daughter):
-                    sp = s
+                s = 0
+                for i in lowest(tree, p=tree[0].daughter):
+                    path.insert(0, i)
                     s = i
+                del path[0]
                 tree[0].value = tree[s].value
-                tree[sp].son = tree[s].daughter
+                tree[path[0]].son = tree[s].daughter
+                p = tree[s].daughter
         return True
     while True:
         if tree[p].value == key:
             if tree[p].son is None and tree[p].daughter is None:
-                connect(tree, parent[0], None, p)
+                connect(tree, path[0], None, p)
+                p = None
             elif tree[p].son is None:
-                connect(tree, parent[0], tree[p].daughter, p)
+                connect(tree, path[0], tree[p].daughter, p)
+                p = tree[p].daughter
             elif tree[p].daughter is None:
-                connect(tree, parent[0], tree[p].son, p)
+                connect(tree, path[0], tree[p].son, p)
+                p = tree[p].son
             else:
+                path.insert(0, p)
                 if tree[tree[p].daughter].son is None:
                     tree[p].value = tree[tree[p].daughter].value
                     tree[p].daughter = tree[tree[p].daughter].daughter
+                    p = tree[p].daughter
                 else:
-                    s, sp = 0, 0
+                    s = 0
                     for i in lowest(tree, p=tree[p].daughter):
-                        sp = s
+                        path.insert(0, i)
                         s = i
+                    del path[0]
                     tree[p].value = tree[s].value
-                    tree[sp].son = tree[s].daughter
-            break
+                    tree[path[0]].son = tree[s].daughter
+                    p = tree[s].daughter
+            return True
         elif key < tree[p].value and tree[p].son is not None:
-            parent = (p, 0)
+            path.insert(0, p)
             p = tree[p].son
         elif tree[p].daughter is not None:
-            parent = (p, 1)
+            path.insert(0, p)
             p = tree[p].daughter
         else:
             return False
