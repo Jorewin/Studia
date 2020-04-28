@@ -247,144 +247,136 @@ def gendata(handler: Handler, settings: dict) -> str:
 @cmd.addtoswitch(switch=handler.commands)
 @iofiles(source='data/settings.json')
 @cmd.correctness
-def processdata(handler: Handler, settings: dict, *, _t: str = None) -> str:
+def processdata(handler: Handler, settings: dict) -> str:
     """
     Testing mechanism
     :param Handler handler:
     :param dict settings:
-    :param str _t: User specified, optional, BST or AVL
     :return:
     :rtype: str
     """
     shutil.rmtree('processeddata')
     os.mkdir('processeddata')
-    settings['BST'] = False
-    settings['AVL'] = False
-    if _t is None or _t == 'BST':
-        total = 60
-        iteration = 0
-        printProgressBar(iteration, total)
-        creating, finding, printing, DSW, nprinting, nfinding = [], [], [], [], [], []
-        for i in range(10, settings['upperlimit'] + 1, settings['upperlimit'] // 10):
-            iteration += 1
+    total = 60
+    iteration = 0
+    printProgressBar(iteration, total)
+    creating, finding, printing, DSW, nprinting, nfinding = [], [], [], [], [], []
+    for i in range(10, settings['upperlimit'] + 1, settings['upperlimit'] // 10):
+        iteration += 1
 
-            # def create():
-            #     tree = jsonread(f'data/{i}.json')
-            #     handler.algorythms['genbst'](handler, tree)
-
+        def create():
             tree = jsonread(f'data/{i}.json')
-            devcreate(tree)
-            # handler.algorythms['genbst'](handler, tree)
-            # time = timeit.timeit(stmt=create, number=10)
-            # time /= 10
-            # creating.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
+            handler.algorythms['genbst'](handler, tree)
 
-            def finder():
-                handler.algorythms['find'](handler, tree, 'lowest')
+        tree = jsonread(f'data/{i}.json')
+        handler.algorythms['genbst'](handler, tree)
+        time = timeit.timeit(stmt=create, number=10)
+        time /= 10
+        creating.append(time)
+        printProgressBar(iteration, total)
+        iteration += 1
 
-            time = timeit.timeit(stmt=finder, number=10)
-            time /= 10
-            finding.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
+        def finder():
+            handler.algorythms['find'](handler, tree, 'lowest')
 
-            def printer():
-                handler.algorythms['in_order2'](tree, 0)
+        time = timeit.timeit(stmt=finder, number=10)
+        time /= 10
+        finding.append(time)
+        printProgressBar(iteration, total)
+        iteration += 1
 
-            time = timeit.timeit(stmt=printer, number=10)
-            time /= 10
-            printing.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
+        def printer():
+            handler.algorythms['in_order3'](tree, 0)
 
-            def fixer():
-                handler.algorythms['dsw'](handler, tree)
+        time = timeit.timeit(stmt=printer, number=10)
+        time /= 10
+        printing.append(time)
+        printProgressBar(iteration, total)
+        iteration += 1
 
-            time = timeit.timeit(stmt=fixer, number=10)
-            time /= 10
-            DSW.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
-
+        def fixer():
             handler.algorythms['dsw'](handler, tree)
 
-            def finder():
-                handler.algorythms['find'](handler, tree, 'lowest')
-
-            time = timeit.timeit(stmt=finder, number=10)
-            time /= 10
-            nfinding.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
-
-            def printer():
-                handler.algorythms['in_order2'](tree, 0)
-
-            time = timeit.timeit(stmt=printer, number=10)
-            time /= 10
-            nprinting.append(time)
-            printProgressBar(iteration, total)
-        # creating = numpy.asarray(creating)
-        # numpy.savetxt('processeddata/bst_creating.csv', creating, delimiter=',')
-        finding = numpy.asarray(finding)
-        numpy.savetxt('processeddata/bst_finding.csv', finding, delimiter=',')
-        printing = numpy.asarray(printing)
-        numpy.savetxt('processeddata/bst_printing.csv', printing, delimiter=',')
-        DSW = numpy.asarray(DSW)
-        numpy.savetxt(f'processeddata/bst_DSW.csv', DSW, delimiter=',')
-        nfinding = numpy.asarray(nfinding)
-        numpy.savetxt('processeddata/dsw_bst_finding.csv', nfinding, delimiter=',')
-        nprinting = numpy.asarray(nprinting)
-        numpy.savetxt('processeddata/dsw_bst_printing.csv', nprinting, delimiter=',')
-        settings['BST'] = True
-
-    if _t is None or _t == 'AVL':
-        total = 30
-        iteration = 0
+        time = timeit.timeit(stmt=fixer, number=10)
+        time /= 10
+        DSW.append(time)
         printProgressBar(iteration, total)
-        creating, finding, printing = [], [], []
-        for i in range(10, settings['upperlimit'] + 1, settings['upperlimit'] // 10):
-            iteration += 1
+        iteration += 1
 
-            def create():
-                tree = jsonread(f'data/{i}.json')
-                handler.algorythms['genavl'](handler, tree)
+        handler.algorythms['dsw'](handler, tree)
 
+        def finder():
+            handler.algorythms['find'](handler, tree, 'lowest')
+
+        time = timeit.timeit(stmt=finder, number=10)
+        time /= 10
+        nfinding.append(time)
+        printProgressBar(iteration, total)
+        iteration += 1
+
+        def printer():
+            handler.algorythms['in_order3'](tree, 0)
+
+        time = timeit.timeit(stmt=printer, number=10)
+        time /= 10
+        nprinting.append(time)
+        printProgressBar(iteration, total)
+    creating = numpy.asarray(creating)
+    numpy.savetxt('processeddata/bst_creating.csv', creating, delimiter=',')
+    finding = numpy.asarray(finding)
+    numpy.savetxt('processeddata/bst_finding.csv', finding, delimiter=',')
+    printing = numpy.asarray(printing)
+    numpy.savetxt('processeddata/bst_printing.csv', printing, delimiter=',')
+    DSW = numpy.asarray(DSW)
+    numpy.savetxt(f'processeddata/bst_DSW.csv', DSW, delimiter=',')
+    nfinding = numpy.asarray(nfinding)
+    numpy.savetxt('processeddata/dsw_bst_finding.csv', nfinding, delimiter=',')
+    nprinting = numpy.asarray(nprinting)
+    numpy.savetxt('processeddata/dsw_bst_printing.csv', nprinting, delimiter=',')
+    settings['BST'] = True
+
+    total = 30
+    iteration = 0
+    printProgressBar(iteration, total)
+    creating, finding, printing = [], [], []
+    for i in range(10, settings['upperlimit'] + 1, settings['upperlimit'] // 10):
+        iteration += 1
+
+        def create():
             tree = jsonread(f'data/{i}.json')
             handler.algorythms['genavl'](handler, tree)
-            time = timeit.timeit(stmt=create, number=10)
-            time /= 10
-            creating.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
 
-            def finder():
-                handler.algorythms['find'](handler, tree, 'lowest')
+        tree = jsonread(f'data/{i}.json')
+        handler.algorythms['genavl'](handler, tree)
+        time = timeit.timeit(stmt=create, number=10)
+        time /= 10
+        creating.append(time)
+        printProgressBar(iteration, total)
+        iteration += 1
 
-            time = timeit.timeit(stmt=finder, number=10)
-            time /= 10
-            finding.append(time)
-            printProgressBar(iteration, total)
-            iteration += 1
+        def finder():
+            handler.algorythms['find'](handler, tree, 'lowest')
 
-            def printer():
-                handler.algorythms['in_order2'](tree, 0)
+        time = timeit.timeit(stmt=finder, number=10)
+        time /= 10
+        finding.append(time)
+        printProgressBar(iteration, total)
+        iteration += 1
 
-            time = timeit.timeit(stmt=printer, number=10)
-            time /= 10
-            printing.append(time)
-            printProgressBar(iteration, total)
-        creating = numpy.asarray(creating)
-        numpy.savetxt('processeddata/avl_creating.csv', creating, delimiter=',')
-        finding = numpy.asarray(finding)
-        numpy.savetxt('processeddata/avl_finding.csv', finding, delimiter=',')
-        printing = numpy.asarray(printing)
-        numpy.savetxt('processeddata/avl_printing.csv', printing, delimiter=',')
-        settings['AVL'] = True
-    else:
-        return f'{_t} is not an available tree type'
+        def printer():
+            handler.algorythms['in_order3'](tree, 0)
+
+        time = timeit.timeit(stmt=printer, number=10)
+        time /= 10
+        printing.append(time)
+        printProgressBar(iteration, total)
+    creating = numpy.asarray(creating)
+    numpy.savetxt('processeddata/avl_creating.csv', creating, delimiter=',')
+    finding = numpy.asarray(finding)
+    numpy.savetxt('processeddata/avl_finding.csv', finding, delimiter=',')
+    printing = numpy.asarray(printing)
+    numpy.savetxt('processeddata/avl_printing.csv', printing, delimiter=',')
+    settings['AVL'] = True
     jsonwrite(settings, 'processeddata/settings.json')
     return f'data processed successfully'
 
@@ -653,7 +645,7 @@ def pre_order2(tree: list, p: int):
 @cmd.addtoswitch(switch=handler.algorythms)
 def in_order(tree: list, p: int):
     """
-    Returns keys of the tree
+    Returns keys of the tree (recursive)
     :param list tree:
     :param int p:
     :return:
@@ -670,7 +662,7 @@ def in_order(tree: list, p: int):
 @cmd.addtoswitch(switch=handler.algorythms)
 def in_order2(tree: list, p: int):
     """
-    Returns keys of the tree
+    Experimental function
     :param list tree:
     :param int p:
     :return:
@@ -688,6 +680,29 @@ def in_order2(tree: list, p: int):
         if tree[arr[i]].son is not None:
             arr.insert(i, tree[arr[i]].son)
     return arr
+
+
+@cmd.addtoswitch(switch=handler.orders)
+@cmd.addtoswitch(switch=handler.algorythms)
+def in_order3(tree: list, p: int):
+    """
+    Returns keys of the tree (iterative)
+    :param list tree:
+    :param int p:
+    :return:
+    """
+    arr = []
+    s = []
+    while True:
+        if p is not None:
+            s.append(p)
+            p = tree[p].son
+        if p is None:
+            if len(s) > 0:
+                p = tree[s[-1]].daughter
+                arr.append(s.pop())
+            else:
+                return arr
 
 
 @cmd.addtoswitch(switch=handler.orders)
@@ -751,11 +766,13 @@ def RR(tree: list, p: int):
     pointer = tree[p].daughter
     tree[p].value = tree[pointer].value
     tree[p].daughter = tree[pointer].daughter
-    tree[p].balance = tree[pointer].balance + 1
     tree[pointer].daughter = tree[pointer].son
     tree[pointer].son = node.son
     tree[pointer].value = node.value
-    tree[pointer].balance = node.balance - tree[pointer].balance + 1
+    if tree[pointer].balance == 0:
+        tree[p].balance, tree[pointer].balance = 1, -1
+    else:
+        tree[p].balance, tree[pointer].balance = 0, 0
     tree[p].son = pointer
 
 
@@ -796,11 +813,13 @@ def LL(tree: list, p: int):
     pointer = tree[p].son
     tree[p].value = tree[pointer].value
     tree[p].son = tree[pointer].son
-    tree[p].balance = tree[pointer].balance - 1
     tree[pointer].son = tree[pointer].daughter
     tree[pointer].daughter = node.daughter
     tree[pointer].value = node.value
-    tree[pointer].balance = node.balance - tree[pointer].balance - 1
+    if tree[pointer].balance == 0:
+        tree[p].balance, tree[pointer].balance = -1, 1
+    else:
+        tree[p].balance, tree[pointer].balance = 0, 0
     tree[p].daughter = pointer
 
 
@@ -830,48 +849,6 @@ def LR(tree: list, p: int):
     tree[p].daughter = pointer
 
 
-def balancer(tree: list):
-    """
-    Balances the AVL tree
-    :param list tree:
-    :return:
-    """
-    for p in post_order(tree, 0):
-        while abs(tree[p].balance) > 1:
-            if tree[p].balance < -1:
-                if tree[tree[p].daughter].balance <= 0:
-                    RR(tree, p)
-                else:
-                    LL(tree, tree[p].daughter)
-                    RR(tree, p)
-            elif tree[p].balance > 1:
-                if tree[tree[p].son].balance >= 0:
-                    LL(tree, p)
-                else:
-                    RR(tree, tree[p].son)
-                    LL(tree, p)
-
-
-def balancer2(tree: list, p: int):
-    """
-    Balances the AVL tree
-    :param list tree:
-    :param int p:
-    :return:
-    """
-    while abs(tree[p].balance) > 1:
-        if tree[p].balance < -1:
-            if tree[tree[p].daughter].balance <= 0:
-                RR(tree, p)
-            else:
-                RL(tree, p)
-        elif tree[p].balance > 1:
-            if tree[tree[p].son].balance >= 0:
-                LL(tree, p)
-            else:
-                LR(tree, p)
-
-
 def inner(tree: list, path: list, p: int):
     if tree[path[0]].balance != 0:
         tree[path[0]].balance = 0
@@ -887,9 +864,9 @@ def inner(tree: list, path: list, p: int):
             r = i
             break
         if tree[i].son == p:
-            tree[i].balance += 1
+            tree[i].balance = 1
         else:
-            tree[i].balance -= 1
+            tree[i].balance = -1
         p = i
     else:
         return
@@ -950,6 +927,7 @@ def createavl(tree: list, start: int, stop: int):
 def genavl(handler: Handler, arr: list) -> str:
     """
     Converts list to AVL tree
+    :param Handler handler:
     :param Toggle toggle:
     :param list arr:
     :return:
@@ -1028,22 +1006,22 @@ def find(handler: Handler, tree: list, method: str) -> str:
     if (func := handler.kinds.get(method)) is not None:
         path = []
         for key in func(tree):
-            path.append(repr(tree[key]))
+            path.append(f'{key} ' + repr(tree[key]))
         return '\n'.join(path)
     else:
         return f'{method} method is not available.'
 
 
-def connect(tree: list, p: int, c: int, set: int):
+def connect(tree: list, p: int, c: int, d: int):
     """
     Connects child with parent
     :param list tree:
     :param int p:
     :param int c:
-    :param int set: 0 or 1
+    :param int d:
     :return:
     """
-    if set == 0:
+    if tree[p].son == d:
         tree[p].son = c
     else:
         tree[p].daughter = c
@@ -1085,11 +1063,11 @@ def deletebst(tree: list, key: int, p: int = 0) -> bool:
     while True:
         if tree[p].value == key:
             if tree[p].son is None and tree[p].daughter is None:
-                connect(tree, parent[0], None, parent[1])
+                connect(tree, parent[0], None, p)
             elif tree[p].son is None:
-                connect(tree, parent[0], tree[p].daughter, parent[1])
+                connect(tree, parent[0], tree[p].daughter, p)
             elif tree[p].daughter is None:
-                connect(tree, parent[0], tree[p].son, parent[1])
+                connect(tree, parent[0], tree[p].son, p)
             else:
                 if tree[tree[p].daughter].son is None:
                     tree[p].value = tree[tree[p].daughter].value
@@ -1112,70 +1090,130 @@ def deletebst(tree: list, key: int, p: int = 0) -> bool:
             return False
 
 
+def balancer(tree: list, path: list, p: int):
+    """
+    Balancer
+    :param list tree:
+    :param list path:
+    :param int p:
+    :return:
+    """
+    for i in path:
+        if tree[i].balance == 0:
+            if tree[i].daughter == p:
+                tree[i].balance = 1
+            else:
+                tree[i].balance = -1
+            return
+        elif tree[i].balance == 1 and tree[i].son == p:
+            tree[i].balance = 0
+            p = i
+            continue
+        elif tree[i].balance == -1 and tree[i].daughter == p:
+            tree[i].balance = 0
+            p = i
+            continue
+        else:
+            if tree[i].balance == 1 and tree[i].daughter == p:
+                if tree[tree[i].son].balance == 0:
+                    LL(tree, i)
+                    return
+                elif tree[i].balance == tree[tree[i].son].balance:
+                    LL(tree, i)
+                    p = i
+                    continue
+                else:
+                    LR(tree, i)
+                    p = i
+                    continue
+            elif tree[i].balance == -1 and tree[i].son == p:
+                if tree[tree[i].daughter].balance == 0:
+                    RR(tree, i)
+                    return
+                elif tree[i].balance == tree[tree[i].daughter].balance:
+                    RR(tree, i)
+                    p = i
+                    continue
+                else:
+                    RL(tree, i)
+                    p = i
+                    continue
+
+
 def deleteavl(tree: list, key: int, p: int = 0) -> bool:
     """
     Delete a node
     :param list tree:
     :param int key:
     :param int p:
-    :return: finished successfully
+    :return:
     :rtype: bool
     """
-    parent = (0, 0)
+    path = []
     if tree[0] == key:
         if tree[0].son is None and tree[0].daughter is None:
             tree[0].value = None
+            return True
         elif tree[0].son is None:
             tree[0].value = tree[tree[0].daughter].value
             tree[0].son = tree[tree[0].daughter].son
             tree[0].daughter = tree[tree[0].daughter].daughter
+            p = tree[0].daughter
         elif tree[0].daughter is None:
             tree[0].value = tree[tree[0].son].value
             tree[0].daughter = tree[tree[0].son].daughter
             tree[0].son = tree[tree[0].son].son
+            p = tree[0].son
         else:
+            path = [0]
             if tree[tree[0].daughter].son is None:
                 tree[0].value = tree[tree[0].daughter].value
                 tree[0].daughter = tree[tree[0].daughter].daughter
+                p = tree[0].daughter
             else:
-                s, sp = 0, 0
-                for i in lowest(tree, p=tree[p].daughter):
-                    tree[i].balance -= 1
-                    sp = s
+                s = 0
+                for i in lowest(tree, p=tree[0].daughter):
+                    path.insert(0, i)
                     s = i
+                del path[0]
                 tree[0].value = tree[s].value
-                tree[sp].son = tree[s].daughter
-            tree[p].balance += 1
+                tree[path[0]].son = tree[s].daughter
+                p = tree[s].daughter
+        balancer(tree, path, p)
         return True
     while True:
         if tree[p].value == key:
             if tree[p].son is None and tree[p].daughter is None:
-                connect(tree, parent[0], None, parent[1])
+                connect(tree, path[0], None, p)
+                p = None
             elif tree[p].son is None:
-                connect(tree, parent[0], tree[p].daughter, parent[1])
+                connect(tree, path[0], tree[p].daughter, p)
+                p = tree[p].daughter
             elif tree[p].daughter is None:
-                connect(tree, parent[0], tree[p].son, parent[1])
+                connect(tree, path[0], tree[p].son, p)
+                p = tree[p].son
             else:
+                path.insert(0, p)
                 if tree[tree[p].daughter].son is None:
                     tree[p].value = tree[tree[p].daughter].value
                     tree[p].daughter = tree[tree[p].daughter].daughter
+                    p = tree[p].daughter
                 else:
-                    s, sp = 0, 0
+                    s = 0
                     for i in lowest(tree, p=tree[p].daughter):
-                        tree[i].balance -= 1
-                        sp = s
+                        path.insert(0, i)
                         s = i
+                    del path[0]
                     tree[p].value = tree[s].value
-                    tree[sp].son = tree[s].daughter
-                tree[p].balance += 1
+                    tree[path[0]].son = tree[s].daughter
+                    p = tree[s].daughter
+            balancer(tree, path, p)
             return True
         elif key < tree[p].value and tree[p].son is not None:
-            parent = (p, 0)
-            tree[p].balance -= 1
+            path.insert(0, p)
             p = tree[p].son
         elif tree[p].daughter is not None:
-            parent = (p, 1)
-            tree[p].balance += 1
+            path.insert(0, p)
             p = tree[p].daughter
         else:
             return False
@@ -1209,16 +1247,15 @@ def mydel(handler: Handler, tree: list, times: int) -> str:
         if isinstance(tree[0], AVLnode):
             backup = copy.deepcopy(tree)
             if deleteavl(tree, key):
-                balancer(tree)
-                print('Node {key} succesfully deleted')
+                print(f'Node {key} succesfully deleted')
             else:
                 tree = backup
-                print('Node {key} doesn\'t exist')
+                print(f'Node {key} doesn\'t exist')
         else:
             if deletebst(tree, key):
-                print('Node {key} succesfully deleted')
+                print(f'Node {key} succesfully deleted')
             else:
-                print('Node {key} doesn\'t exist')
+                print(f'Node {key} doesn\'t exist')
 
 
 def right(tree: list, p: int):
