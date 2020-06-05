@@ -81,7 +81,7 @@ def correctness(func: types.FunctionType) -> types.FunctionType:
                     if (result := func(*args, **kwargs)) is not None:
                         return result
                     else:
-                        return f"Inner fucntion {func.__name__} must should return a completion information"
+                        return f"Inner fucntion {func.__name__} should return a completion information"
                 else:
                     return f"{func.__name__}, too many arguments were given"
     return wrapper_correctness
@@ -255,6 +255,7 @@ def cclear():
         os.system("cls")
     else:
         os.system("clear")
+    return "\n"
 
 
 def detector(charray: str):
