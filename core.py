@@ -5,6 +5,8 @@ import types
 import functools
 import copy
 import random
+import numpy
+import matplotlib.pyplot as plt
 
 
 class Pretty(list):
@@ -18,6 +20,9 @@ class Handler(cm.Controller):
         self.create_modes = {}
         self.traverse_modes = {}
         self.sort_modes = {}
+        self.undirected = {}
+        self.print_modes = {}
+        self.find_modes = {}
         super().__init__()
 
 
@@ -25,6 +30,36 @@ handler = Handler()
 handler.commands = cm.controller.commands
 
 
+general = cm.Settings()
+
+
+@cm.add_to_switch(switch=handler.commands)
+def show() -> str:
+    """
+    Shows current settings
+    :return:
+    """
+    result = "Current settings:\n"
+    for tag in sorted(general.tags):
+        result += f"{tag:20}: {general[tag]:5} -> {general.desc(tag)}\n"
+    return result
+
+
+@cm.add_to_switch(switch=handler.commands, name="set")
+@cm.correctness
+def myset(key: str, value: int) -> str:
+    """
+    Allows to change chosen [key] setting to [value]
+    :param key:
+    :param value:
+    :return:
+    """
+    general.change(key, value)
+    general.save()
+    return "Setiing saved successfuly"
+
+
+@cm.add_to_switch(switch=handler.print_modes)
 @cm.add_to_switch(switch=handler.create_modes)
 def matrix(data):
     """Adjacency matrix"""
@@ -32,6 +67,7 @@ def matrix(data):
     return data
 
 
+@cm.add_to_switch(switch=handler.print_modes)
 @cm.add_to_switch(switch=handler.create_modes)
 def table(data):
     """Adjacency list"""
@@ -45,6 +81,7 @@ def table(data):
     return data
 
 
+@cm.add_to_switch(switch=handler.print_modes)
 @cm.add_to_switch(switch=handler.create_modes)
 def lists(data):
     """List of edges"""
@@ -116,9 +153,8 @@ def gen_from_txt() -> str:
         return "Graph generated successfully."
 
 
-
 @cm.add_to_switch(switch=handler.commands, name="print")
-@cm.availability(switch=handler.create_modes, name="representation types")
+@cm.availability(switch=handler.print_modes, name="representation types")
 @cm.correctness
 def new_print(type: str) -> str:
     """
@@ -132,41 +168,32 @@ def new_print(type: str) -> str:
         return f"File {type}.pkl doesn't exist, generate data first."
 
 
-def dfs_sort_decorator(func: types.FunctionType):
-    """
-    Joins the sort request with the desired algorythm to perform topological sorting
-    :param func:
-    :param data:
-    :return:
-    """
-    @functools.wraps(func)
-    def dfs_sort_wrapper(data: list):
-        if isinstance(data[0], tuple):
-            length = 0
-            for i, j in data:
-                length = max(length, max(i, j))
-            check_list = [0 for _ in range(length + 1)]
-        else:
-            check_list = [0 for _ in range(len(data))]
-        yield from func(data, 0, check_list)
-        yield 2, -1, 0
-        for i in range(1, len(check_list)):
-            if check_list[i] == 0:
-                yield from func(data, i, check_list)
-                yield 2, -1, i
-
-    return dfs_sort_wrapper
+def dfs_sort(func: types.FunctionType, data: list):
+    if isinstance(data[0], tuple):
+        length = 0
+        for i, j in data:
+            length = max(length, max(i, j))
+        check_list = [0 for _ in range(length + 1)]
+    else:
+        check_list = [0 for _ in range(len(data))]
+    yield from func(data, 0, check_list)
+    yield 2, -1, 0
+    for i in range(1, len(check_list)):
+        if check_list[i] == 0:
+            yield from func(data, i, check_list)
+            yield 2, -1, i
 
 
 @cm.add_to_switch(switch=handler.sort_modes)
-@dfs_sort_decorator
 @cm.add_to_switch(switch=handler.traverse_modes)
-def dfs_matrix(data: list, start: int = 0, check_list: list = []):
+def dfs_matrix(data: list, start: int = 0, check_list: list = None, path: list = None):
     """dfs - Adjacency matrix"""
     yield 0, -1, start
-    if check_list == []:
+    if check_list is None:
         check_list = [0 for _ in data]
-    path = [start]
+    if path is None:
+        path = []
+    path.append(start)
     check_list[start] = 1
     j = 0
     while True:
@@ -178,8 +205,10 @@ def dfs_matrix(data: list, start: int = 0, check_list: list = []):
                 yield 2, path[-2], path[-1]
                 j = path.pop() + 1
                 continue
-        if check_list[j] != 2 and data[path[-1]][j] == 1:
-            yield check_list[j], path[-1], j
+        if check_list[j] == 1 and data[path[-1]][j] == 1:
+            yield 1, path[-1], j
+        if check_list[j] == 0 and data[path[-1]][j] == 1:
+            yield 0, path[-1], j
             path.append(j)
             check_list[j] = 1
             j = 0
@@ -188,12 +217,11 @@ def dfs_matrix(data: list, start: int = 0, check_list: list = []):
 
 
 @cm.add_to_switch(switch=handler.sort_modes)
-@dfs_sort_decorator
 @cm.add_to_switch(switch=handler.traverse_modes)
-def dfs_table(data: list, start: int = 0, check_list: list = []):
+def dfs_table(data: list, start: int = 0, check_list: list = None):
     """dfs - Adjacency list"""
     yield 0, -1, start
-    if check_list == []:
+    if check_list is None:
         check_list = [0 for _ in data]
     check_list[start] = 1
     path = [start]
@@ -208,20 +236,22 @@ def dfs_table(data: list, start: int = 0, check_list: list = []):
                 path.pop()
                 j = 0
                 continue
-        if check_list[data[path[-1]][j]] != 2:
-            yield check_list[data[path[-1]][j]], path[-1], data[path[-1]][j]
+        if check_list[data[path[-1]][j]] == 1:
+            yield 1, path[-1], data[path[-1]][j]
+        if check_list[data[path[-1]][j]] == 0:
+            yield 0, path[-1], data[path[-1]][j]
             check_list[data[path[-1]][j]] = 1
             path.append(data[path[-1]][j])
             j = 0
         else:
             j += 1
 
+
 @cm.add_to_switch(switch=handler.sort_modes)
-@dfs_sort_decorator
 @cm.add_to_switch(switch=handler.traverse_modes)
-def dfs_list(data: list, start: int = 0, check_list: list = []):
+def dfs_list(data: list, start: int = 0, check_list: list = None):
     """dfs - List of edges"""
-    if check_list == []:
+    if check_list is None:
         length= 0
         for i, j in data:
             length = max(length, max(i, j))
@@ -239,13 +269,15 @@ def dfs_list(data: list, start: int = 0, check_list: list = []):
                 path.pop()
                 j = 0
                 continue
-        if data[j][0] == path[-1] and check_list[data[j][1]] != 2:
-            yield check_list[data[j][1]], path[-1], data[j][1]
+        if data[j][0] == path[-1] and check_list[data[j][1]] == 1:
+            yield 1, path[-1], data[j][1]
+        if data[j][0] == path[-1] and check_list[data[j][1]] == 0:
+            yield 0, path[-1], data[j][1]
             check_list[data[j][1]] = 1
             path.append(data[j][1])
             j = 0
-            continue
-        j += 1
+        else:
+            j += 1
 
 
 @cm.add_to_switch(switch=handler.sort_modes, name="bfs_matrix")
@@ -406,10 +438,10 @@ def traverse(type: str) -> str:
         return f"File {type[4::]}.pkl doesn't exist, generate data first."
 
 
-@cm.add_to_switch(switch=handler.commands)
+@cm.add_to_switch(switch=handler.commands, name="sort")
 @cm.availability(switch=handler.sort_modes, name="sorting algorythms")
 @cm.correctness
-def sort(type: str) -> str:
+def new_sort(type: str) -> str:
     """
     Performs a topological sort on a graph using the chosen [type] algorythm
     :param type:
@@ -422,7 +454,7 @@ def sort(type: str) -> str:
         result = ""
         sorted = []
         if type[:3:] == "dfs":
-            for i, j, k in func(data):
+            for i, j, k in dfs_sort(func, data):
                 if j == -1 and i == 0:
                     result += f"         -> {k} - white\n"
                 elif j == -1 and i == 2:
@@ -514,11 +546,10 @@ def join(data: list, degrees: list, old: int, new: int):
     return new
 
 
-@cm.add_to_switch(switch=handler.commands)
-@cm.correctness
-def create_hamilton(size: int, density: int):
+@cm.add_to_switch(switch=handler.undirected)
+def cycles(size: int, density: int):
     """
-    Creates a directed graph
+    Creates a directed graph with hamilton's and euler's cycle
     :param size:
     :param denisty:
     :return:
@@ -544,11 +575,406 @@ def create_hamilton(size: int, density: int):
         join(data, degrees, first, second)
         join(data, degrees, second, third)
         join(data, degrees, third, first)
-    cm.pklwrite(Pretty(data), "hamilton.pkl")
-    return "Graph generated successfully."
+    return data
+
+
+@cm.add_to_switch(switch=handler.undirected)
+def nocycles(size: int, density: int):
+    data = cycles(size, density)
+    v = len(data) - 1
+    for i in range(len(data)):
+        data[i][v] = 0
+        data[v][i] = 0
+    return data
+
+
+@cm.add_to_switch(switch=handler.commands)
+@cm.availability(switch=handler.undirected, name="undirected graphs")
+@cm.correctness
+@cm.add_to_switch(switch=handler.print_modes, name="undirected")
+def create_undirected(type: str, size: int, density: int):
+    """
+    Creates an undirected graph of chosen type
+    :param type:
+    :param size:
+    :param density:
+    :return:
+    """
+    if (func := handler.undirected.get(type)) is not None:
+        cm.pklwrite(Pretty(func(size, density)), "undirected.pkl")
+        return "Graph successfully created"
+    else:
+        return f"{type} is not an available undirected graph."
+
+
+@cm.add_to_switch(switch=handler.find_modes)
+def hamilton(source: str):
+    data = cm.pklread(source)
+    check_list = [0 for _ in range(len(data))]
+    path = []
+    for i, j, k in dfs_matrix(data, 0, check_list=check_list, path=path):
+        if len(path) == len(data) and path[0] == k:
+            return path + [k]
+        if i == 2:
+            check_list[k] = 0
+    else:
+        return []
+
+
+@cm.add_to_switch(switch=handler.find_modes)
+def euler(source: str):
+    data = cm.pklread(source)
+    for v in range(len(data)):
+        data = cm.pklread(source)
+        lenght = sum([sum(data[i]) for i in range(len(data))]) / 2
+        check_list = [0 for _ in range(len(data))]
+        path = []
+        for i, j, k in dfs_matrix(data, v, check_list=check_list, path=path):
+            if i == 2 and len(path) - 1 == lenght:
+                return path
+            if i == 1:
+                check_list[k] = 0
+            if i == 0 and j != -1:
+                data[j][k] = 0
+                data[k][j] = 0
+    else:
+        return []
+
+
+
+@cm.add_to_switch(switch=handler.commands)
+@cm.availability(switch=handler.find_modes, name="find modes")
+@cm.correctness
+def find(type: str):
+    """
+    Attemps to find a chosen cycle.
+    :param type:
+    :return:
+    """
+    if (func := handler.find_modes.get(type)) is None:
+        return f"{type} is not an available find mode."
+    if os.path.isfile("undirected.pkl"):
+        if (result := func("undirected.pkl")):
+            return str(result)
+        else:
+            return f"{type}'s cycle doesn't exist."
+    else:
+        return "Generate the data first"
+
+
+def check_name(name: str):
+    if not os.path.isdir(name):
+        return name
+    number = 1
+    while os.path.isdir(name + str(number)):
+        number += 1
+    return name + str(number)
+
+
+@cm.add_to_switch(switch=handler.commands)
+@cm.correctness
+def gen_data(type: str) -> str:
+    """
+    Generates graphs for time measurements
+    :param type: directed or undirected_cycles or undirected_nocycles or all
+    :return:
+    """
+    if type not in ["directed", "undirected_cycles", "undirected_nocycles", "all"]:
+        return f"{type} is not an available option."
+    os.mkdir((name := check_name("graphs/batch")))
+    internal = cm.Settings(source=f"{name}/settings.json")
+    internal.tags = general.tags
+    internal.new("d", False, "Directed")
+    internal.new("uc", False, "Undirected_cycles")
+    internal.new("unc", False, "Undirected_nocycles")
+    if type == "all" or type == "directed":
+        internal.change("d", True)
+        bar = cm.Bar(general["d_number"] * 3, 0, prefix="Directed")
+        bar.show()
+        for size in range(general["d_start"], general["d_start"] + general["d_number"] * general["d_step"],
+                          general["d_step"]):
+            data = [[0 for _ in range(size)] for _ in range(size)]
+            for i in range(size - 1):
+                for j in range(i + 1, size):
+                    data[i][j] = 1
+            for mode in handler.create_modes:
+                result = handler.create_modes[mode](data)
+                cm.pklwrite(result, f"{name}/{mode}-{size}.pkl")
+                bar.next()
+        bar.end()
+        del bar
+    if type == "all" or type == "undirected_cycles":
+        internal.change("uc", True)
+        bar = cm.Bar(general["u_number"] * 2, 0, prefix="Undirected_cycles")
+        bar.show()
+        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"],
+                          general["u_step"]):
+            cm.pklwrite(cycles(size, 30), f"{name}/cycles(30%)-{size}.pkl")
+            bar.next()
+            cm.pklwrite(cycles(size, 70), f"{name}/cycles(70%)-{size}.pkl")
+            bar.next()
+        bar.end()
+        del bar
+    if type == "all" or type == "undirected_nocycles":
+        internal.change("unc", True)
+        bar = cm.Bar(general["u_number"], 0, prefix="Undirected_nocycles")
+        bar.show()
+        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"], \
+                          general["u_step"]):
+            cm.pklwrite(nocycles(size, 50), f"{name}/nocycles-{size}.pkl")
+            bar.next()
+        bar.end()
+        del bar
+    internal.save()
+    del internal
+    return "Graphs generated successfully."
+
+
+def pass_data(func, data):
+    def traverse_wrapper():
+        for _ in func(data):
+            pass
+    return traverse_wrapper
+
+
+def dfs_sort_decorator(func, data):
+    def dfs_sort_wrapper():
+        for _ in dfs_sort(func, data):
+            pass
+    return dfs_sort_wrapper
+
+
+def pass_source(func, source):
+    def pass_wrapper():
+        func(source)
+    return pass_wrapper
+
+
+@cm.add_to_switch(switch=handler.commands)
+@cm.correctness
+def process_data(batch: str, type: str) -> str:
+    """
+    Processes a chosen data batch
+    :param batch: example batch1
+    :param type: directed or undirected_cycles or undirected_nocycles or all
+    :return:
+    """
+    if type not in ["directed", "undirected_cycles", "undirected_nocycles", "all"]:
+        return f"{type} is not an available option."
+    internal = cm.Settings(source=f"graphs/{batch}/settings.json")
+    if not internal.load():
+        return f"graphs/{batch} dir does not exist or was corrupted, generate data first."
+    os.mkdir((name := check_name("data/batch")))
+    if type == "all" or type == "directed":
+        if not internal['d']:
+            return "directed graphs are not present in this data batch"
+        bar = cm.Bar(internal["d_number"] * 12, 0, "Directed")
+        bar.show()
+        traversal_dfs_matrix = []
+        traversal_dfs_table = []
+        traversal_dfs_list = []
+        traversal_bfs_matrix = []
+        traversal_bfs_table = []
+        traversal_bfs_list = []
+        sort_dfs_matrix = []
+        sort_dfs_table = []
+        sort_dfs_list = []
+        sort_bfs_matrix = []
+        sort_bfs_table = []
+        sort_bfs_list = []
+        for size in range(general["d_start"], general["d_start"] + general["d_number"] * general["d_step"], \
+                          general["d_step"]):
+            #matrix
+            data = cm.pklread(f"graphs/{batch}/matrix-{size}.pkl")
+            traversal_dfs_matrix.append(timeit.timeit(stmt=pass_data(dfs_matrix, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            traversal_bfs_matrix.append(timeit.timeit(stmt=pass_data(bfs_matrix, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            sort_dfs_matrix.append(timeit.timeit(stmt=dfs_sort_decorator(dfs_matrix, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            sort_bfs_matrix.append(timeit.timeit(stmt=pass_data(bfs_matrix_sort, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+
+            #table
+            data = cm.pklread(f"graphs/{batch}/table-{size}.pkl")
+            traversal_dfs_table.append(timeit.timeit(stmt=pass_data(dfs_table, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            traversal_bfs_table.append(timeit.timeit(stmt=pass_data(bfs_table, data), \
+                                                     number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            sort_dfs_table.append(timeit.timeit(stmt=dfs_sort_decorator(dfs_table, data), \
+                                                     number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            sort_bfs_table.append(timeit.timeit(stmt=pass_data(bfs_table_sort, data), \
+                                                     number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+
+            #lists
+            data = cm.pklread(f"graphs/{batch}/lists-{size}.pkl")
+            traversal_dfs_list.append(timeit.timeit(stmt=pass_data(dfs_list, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            traversal_bfs_list.append(timeit.timeit(stmt=pass_data(bfs_list, data), \
+                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            sort_dfs_list.append(timeit.timeit(stmt=dfs_sort_decorator(dfs_list, data), \
+                                                    number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+            sort_bfs_list.append(timeit.timeit(stmt=pass_data(bfs_list_sort, data), \
+                                                    number=internal["d_repetitions"]) / internal["d_repetitions"])
+            bar.next()
+        bar.end()
+        del bar
+        numpy.savetxt(f"{name}/traversal_dfs_matrix.csv", numpy.asarray(traversal_dfs_matrix))
+        numpy.savetxt(f"{name}/traversal_dfs_table.csv", numpy.asarray(traversal_dfs_table))
+        numpy.savetxt(f"{name}/traversal_dfs_list.csv", numpy.asarray(traversal_dfs_list))
+        numpy.savetxt(f"{name}/traversal_bfs_matrix.csv", numpy.asarray(traversal_bfs_matrix))
+        numpy.savetxt(f"{name}/traversal_bfs_table.csv", numpy.asarray(traversal_bfs_table))
+        numpy.savetxt(f"{name}/traversal_bfs_list.csv", numpy.asarray(traversal_bfs_list))
+        numpy.savetxt(f"{name}/sort_dfs_matrix.csv", numpy.asarray(sort_dfs_matrix))
+        numpy.savetxt(f"{name}/sort_dfs_table.csv", numpy.asarray(sort_dfs_table))
+        numpy.savetxt(f"{name}/sort_dfs_list.csv", numpy.asarray(sort_dfs_list))
+        numpy.savetxt(f"{name}/sort_bfs_matrix.csv", numpy.asarray(sort_bfs_matrix))
+        numpy.savetxt(f"{name}/sort_bfs_table.csv", numpy.asarray(sort_bfs_table))
+        numpy.savetxt(f"{name}/sort_bfs_list.csv", numpy.asarray(sort_bfs_list))
+    else:
+        internal.change('d', False)
+    if type == "all" or type == "undirected_cycles":
+        if not internal["uc"]:
+            return "undirected graphs with cycles are not present in this data batch"
+        bar = cm.Bar(internal["u_number"] * 4, 0, "Undirected_cycles")
+        hamilton30_cycles = []
+        hamilton70_cycles = []
+        euler30_cycles = []
+        euler70_cycles = []
+        bar.show()
+        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"], \
+                          general["u_step"]):
+            source = f"graphs/{batch}/cycles(30%)-{size}.pkl"
+            hamilton30_cycles.append(timeit.timeit(stmt=pass_source(hamilton, source), \
+                                                 number=general["u_repetitions"]) / general["u_repetitions"])
+            bar.next()
+            euler30_cycles.append(timeit.timeit(stmt=pass_source(euler, source), \
+                                                   number=general["u_repetitions"]) / general["u_repetitions"])
+            bar.next()
+            source = f"graphs/{batch}/cycles(70%)-{size}.pkl"
+            hamilton70_cycles.append(timeit.timeit(stmt=pass_source(hamilton, source), \
+                                                   number=general["u_repetitions"]) / general["u_repetitions"])
+            bar.next()
+            euler70_cycles.append(timeit.timeit(stmt=pass_source(euler, source), \
+                                                number=general["u_repetitions"]) / general["u_repetitions"])
+            bar.next()
+        bar.end()
+        del bar
+        numpy.savetxt(f"{name}/hamilton(30%).csv", numpy.asarray(hamilton30_cycles))
+        numpy.savetxt(f"{name}/hamilton(70%).csv", numpy.asarray(hamilton70_cycles))
+        numpy.savetxt(f"{name}/euler(30%).csv", numpy.asarray(euler30_cycles))
+        numpy.savetxt(f"{name}/euler(70%).csv", numpy.asarray(euler70_cycles))
+    else:
+        internal.change("uc", False)
+    if type == "all" or type == "undirected_nocycles":
+        if not internal["unc"]:
+            return "undirected graphs without cycles are not present in this data batch"
+        bar = cm.Bar(internal["u_number"], 0, "Undirected_nocycles")
+        hamilton50_nocycles = []
+        bar.show()
+        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"], \
+                          general["u_step"]):
+            source = f"graphs/{batch}/nocycles-{size}.pkl"
+            hamilton50_nocycles.append(timeit.timeit(stmt=pass_source(hamilton, source), \
+                                                 number=general["u_repetitions"]) / general["u_repetitions"])
+            bar.next()
+        bar.end()
+        del bar
+        numpy.savetxt(f"{name}/hamilton(50%).csv", numpy.asarray(hamilton50_nocycles))
+    else:
+        internal.change("unc", False)
+    internal.save(target=f"{name}/settings.json")
+    return "Data processed successfully"
+
+
+@cm.add_to_switch(switch=handler.commands)
+@cm.correctness
+def plot_data(batch: str):
+    internal = cm.Settings(source=f"data/{batch}/settings.json")
+    if not internal.load():
+        return f"data/{batch} dir does not exist or was corrupted, generate data first."
+    os.mkdir((name := check_name("figures/batch")))
+    if internal['d']:
+        x = numpy.arange(internal["d_start"], internal["d_start"] + internal["d_number"] * internal["d_step"], \
+                          internal["d_step"])
+        for addon in ["linear", "log"]:
+            plt.yscale(addon)
+            plt.plot([0], marker='None', linestyle='None', label='DFS')
+            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_matrix.csv")
+            plt.plot(x, y, marker='o', label="adjacency matrix")
+            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_table.csv")
+            plt.plot(x, y, marker='o', label="adjacency list")
+            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_list.csv")
+            plt.plot(x, y, marker='o', label="list of edges")
+            plt.plot([0], marker='None', linestyle='None', label='BFS')
+            y = numpy.loadtxt(f"data/{batch}/traversal_bfs_matrix.csv")
+            plt.plot(x, y, marker='o', label="adjacency matrix")
+            y = numpy.loadtxt(f"data/{batch}/traversal_bfs_table.csv")
+            plt.plot(x, y, marker='o', label="adjacency list")
+            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_list.csv")
+            plt.plot(x, y, marker='o', label="list of edges")
+            plt.title("Graph traversal")
+            plt.legend()
+            plt.xlabel("Number of vertices in the graph")
+            plt.ylabel("Time [s]")
+            plt.grid(True)
+            plt.savefig(f"{name}/traversal-{addon}.png")
+            plt.clf()
+            plt.yscale(addon)
+            plt.plot([0], marker='None', linestyle='None', label='DFS')
+            y = numpy.loadtxt(f"data/{batch}/sort_dfs_matrix.csv")
+            plt.plot(x, y, marker='o', label="adjacency matrix")
+            y = numpy.loadtxt(f"data/{batch}/sort_dfs_table.csv")
+            plt.plot(x, y, marker='o', label="adjacency list")
+            y = numpy.loadtxt(f"data/{batch}/sort_dfs_list.csv")
+            plt.plot(x, y, marker='o', label="list of edges")
+            plt.plot([0], marker='None', linestyle='None', label='BFS')
+            y = numpy.loadtxt(f"data/{batch}/sort_bfs_matrix.csv")
+            plt.plot(x, y, marker='o', label="adjacency matrix")
+            y = numpy.loadtxt(f"data/{batch}/sort_bfs_table.csv")
+            plt.plot(x, y, marker='o', label="adjacency list")
+            y = numpy.loadtxt(f"data/{batch}/sort_dfs_list.csv")
+            plt.plot(x, y, marker='o', label="list of edges")
+            plt.title("Topological sort")
+            plt.legend()
+            plt.xlabel("Number of vertices in the graph")
+            plt.ylabel("Time [s]")
+            plt.grid(True)
+            plt.savefig(f"{name}/sort-{addon}.png")
+            plt.clf()
+    return "Data plotted successfully"
 
 
 if __name__ == "__main__":
+    if not general.load():
+        general.new("d_number", 10, "Directed graphs - number of tests")
+        general.new("d_start", 20, "Directed graphs - the lenght of the shortest test case")
+        general.new("d_step", 1, "Directed graphs - the difference between test cases")
+        general.new("d_repetitions", 10, \
+                    "Directed graphs - number of times one test will be redone in order to eliminate other factors")
+        general.new("u_number", 10, "Undirected graphs - number of tests")
+        general.new("u_start", 20, "Undirected graphs - the lenght of the shortest test case")
+        general.new("u_step", 1, "Undirected graphs - the difference between test cases")
+        general.new("u_repetitions", 10, \
+                    "Undirected graphs - number of times one test will be redone in order to eliminate other factors")
+        general.save()
+    if not os.path.isdir("graphs"):
+        os.mkdir("graphs")
+    if not os.path.isdir("data"):
+        os.mkdir("data")
+    if not os.path.isdir("figures"):
+        os.mkdir("figures")
     if not os.path.isfile("input.txt"):
         with open("input.txt", 'w') as goal:
             pass

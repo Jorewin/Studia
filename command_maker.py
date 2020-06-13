@@ -14,6 +14,79 @@ class Controller():
         self.writemodes = {}
 
 
+class Settings():
+    def __init__(self, source="settings.json"):
+        self.tags = {}
+        self.source = source
+
+    def new(self, name, value, desc):
+        self.tags[name] = [value, desc]
+
+    def __getitem__(self, item):
+        if self.tags.get(item):
+            return self.tags[item][0]
+        else:
+            return None
+
+    def desc(self, name):
+        if self.tags.get(name):
+            return self.tags[name][1]
+        else:
+            return None
+
+    def save(self, target=None):
+        if target is None:
+            target = self.source
+        if not isinstance(target, str):
+            return False
+        if not re.search(r".+\.json$", target):
+            return False
+        jsonwrite(self.tags, target)
+        return True
+
+    def load(self):
+        if not isinstance(self.source, str):
+            return False
+        if not re.search(r".+\.json$", self.source):
+            return False
+        if not os.path.isfile(self.source):
+            return False
+        self.tags = jsonread(self.source)
+        return True
+
+    def change(self, tag, value):
+        if not self.tags.get(tag):
+            return False
+        self.tags[tag][0] = value
+        self.save()
+        return True
+
+
+class Bar():
+    def __init__(self, total, current, prefix = "Progress", filler = '█'):
+        self.total = total
+        self.current = current
+        self.prefix = prefix
+        self.filler = filler
+        self.prefix_len = len(prefix)
+
+    def show(self):
+        done = self.current / self.total * 100
+        print(f"\r{self.prefix:{self.prefix_len}}: {done:6.2f}% |" + (int(done) * self.filler) + \
+              ((100 - int(done)) * '-') + '|', end='\r')
+
+    def next(self, steps = 1):
+        self.current += steps
+        self.show()
+
+    def new_prefix(self, prefix):
+        self.prefix_len = max(self.prefix_len, len(prefix))
+        self.prefix = prefix
+
+    def end(self):
+        print()
+
+
 controller= Controller()
 
 
