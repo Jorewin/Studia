@@ -276,7 +276,11 @@ def clist() -> str:
     """
     result = ["Available commands:"]
     for command in controller.commands:
-        result.append(f"\t+ {command:20} -> {controller.commands[command].__name__}")
+        desc = ""
+        if controller.commands[command].__doc__ is not None:
+            pointer = controller.commands[command].__doc__.find('\n', 1)
+            desc = controller.commands[command].__doc__[1:pointer:]
+        result.append(f"\t+ {command:20} -> {desc}")
     result.append("Type help [command_name] to get more info about specific command")
     return "\n".join(result)
 
@@ -377,7 +381,7 @@ def main():
         command, *arguments = data
         arguments = [detector(argument) for argument in arguments]
         if (func := controller.commands.get(command.lower())) is not None:
-            print(func(*arguments, **kwarguments))
+            print(func(*arguments, **kwarguments), '\n')
         else:
             print(f"{command} is not a defined command")
 

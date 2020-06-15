@@ -579,7 +579,7 @@ def cycles(size: int, density: int):
 
 
 @cm.add_to_switch(switch=handler.undirected)
-def nocycles(size: int, density: int):
+def no_cycles(size: int, density: int):
     data = cycles(size, density)
     v = len(data) - 1
     for i in range(len(data)):
@@ -592,7 +592,7 @@ def nocycles(size: int, density: int):
 @cm.availability(switch=handler.undirected, name="undirected graphs")
 @cm.correctness
 @cm.add_to_switch(switch=handler.print_modes, name="undirected")
-def create_undirected(type: str, size: int, density: int):
+def create_undirected(type: str, size: int, density: int) -> str:
     """
     Creates an undirected graph of chosen type
     :param type:
@@ -608,8 +608,7 @@ def create_undirected(type: str, size: int, density: int):
 
 
 @cm.add_to_switch(switch=handler.find_modes)
-def hamilton(source: str):
-    data = cm.pklread(source)
+def hamilton(data: list):
     check_list = [0 for _ in range(len(data))]
     path = []
     for i, j, k in dfs_matrix(data, 0, check_list=check_list, path=path):
@@ -622,30 +621,26 @@ def hamilton(source: str):
 
 
 @cm.add_to_switch(switch=handler.find_modes)
-def euler(source: str):
-    data = cm.pklread(source)
-    for v in range(len(data)):
-        data = cm.pklread(source)
-        lenght = sum([sum(data[i]) for i in range(len(data))]) / 2
-        check_list = [0 for _ in range(len(data))]
-        path = []
-        for i, j, k in dfs_matrix(data, v, check_list=check_list, path=path):
-            if i == 2 and len(path) - 1 == lenght:
-                return path
-            if i == 1:
-                check_list[k] = 0
-            if i == 0 and j != -1:
-                data[j][k] = 0
-                data[k][j] = 0
+def euler(data: list):
+    check_list = [0 for _ in range(len(data))]
+    cycle = []
+    for i, j, k in dfs_matrix(data, 0, check_list=check_list):
+        if i == 2:
+            cycle.append(k)
+        if i == 1:
+            check_list[k] = 0
+        if i == 0 and j != -1:
+            data[j][k] = 0
+            data[k][j] = 0
     else:
-        return []
-
+        cycle.append(j)
+    return cycle
 
 
 @cm.add_to_switch(switch=handler.commands)
 @cm.availability(switch=handler.find_modes, name="find modes")
 @cm.correctness
-def find(type: str):
+def find(type: str) -> str:
     """
     Attemps to find a chosen cycle.
     :param type:
@@ -654,7 +649,8 @@ def find(type: str):
     if (func := handler.find_modes.get(type)) is None:
         return f"{type} is not an available find mode."
     if os.path.isfile("undirected.pkl"):
-        if (result := func("undirected.pkl")):
+        data = cm.pklread("undirected.pkl")
+        if (result := func(data)):
             return str(result)
         else:
             return f"{type}'s cycle doesn't exist."
@@ -676,23 +672,23 @@ def check_name(name: str):
 def gen_data(type: str) -> str:
     """
     Generates graphs for time measurements
-    :param type: directed or undirected_cycles or undirected_nocycles or all
+    :param type: directed or undirected_cycles or undirected_no_cycles or all
     :return:
     """
-    if type not in ["directed", "undirected_cycles", "undirected_nocycles", "all"]:
+    if type not in ["directed", "undirected_cycles", "undirected_no_cycles", "all"]:
         return f"{type} is not an available option."
     os.mkdir((name := check_name("graphs/batch")))
     internal = cm.Settings(source=f"{name}/settings.json")
-    internal.tags = general.tags
+    internal.tags = copy.deepcopy(general.tags)
     internal.new("d", False, "Directed")
     internal.new("uc", False, "Undirected_cycles")
-    internal.new("unc", False, "Undirected_nocycles")
+    internal.new("unc", False, "Undirected_no_cycles")
     if type == "all" or type == "directed":
         internal.change("d", True)
-        bar = cm.Bar(general["d_number"] * 3, 0, prefix="Directed")
+        bar = cm.Bar(general["number"] * 3, 0, prefix="Directed")
         bar.show()
-        for size in range(general["d_start"], general["d_start"] + general["d_number"] * general["d_step"],
-                          general["d_step"]):
+        for size in range(general["start"], general["start"] + general["number"] * general["step"],
+                          general["step"]):
             data = [[0 for _ in range(size)] for _ in range(size)]
             for i in range(size - 1):
                 for j in range(i + 1, size):
@@ -705,23 +701,23 @@ def gen_data(type: str) -> str:
         del bar
     if type == "all" or type == "undirected_cycles":
         internal.change("uc", True)
-        bar = cm.Bar(general["u_number"] * 2, 0, prefix="Undirected_cycles")
+        bar = cm.Bar(general["number"] * 2, 0, prefix="Undirected_cycles")
         bar.show()
-        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"],
-                          general["u_step"]):
+        for size in range(general["start"], general["start"] + general["number"] * general["step"],
+                          general["step"]):
             cm.pklwrite(cycles(size, 30), f"{name}/cycles(30%)-{size}.pkl")
             bar.next()
             cm.pklwrite(cycles(size, 70), f"{name}/cycles(70%)-{size}.pkl")
             bar.next()
         bar.end()
         del bar
-    if type == "all" or type == "undirected_nocycles":
+    if type == "all" or type == "undirected_no_cycles":
         internal.change("unc", True)
-        bar = cm.Bar(general["u_number"], 0, prefix="Undirected_nocycles")
+        bar = cm.Bar(general["number"], 0, prefix="Undirected_no_cycles")
         bar.show()
-        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"], \
-                          general["u_step"]):
-            cm.pklwrite(nocycles(size, 50), f"{name}/nocycles-{size}.pkl")
+        for size in range(general["start"], general["start"] + general["number"] * general["step"], \
+                          general["step"]):
+            cm.pklwrite(no_cycles(size, 50), f"{name}/no_cycles-{size}.pkl")
             bar.next()
         bar.end()
         del bar
@@ -756,19 +752,21 @@ def process_data(batch: str, type: str) -> str:
     """
     Processes a chosen data batch
     :param batch: example batch1
-    :param type: directed or undirected_cycles or undirected_nocycles or all
+    :param type: directed or undirected_cycles or undirected_no_cycles or all
     :return:
     """
-    if type not in ["directed", "undirected_cycles", "undirected_nocycles", "all"]:
+    if type not in ["directed", "hamilton_cycles", "euler", "hamilton_no_cycles", "all"]:
         return f"{type} is not an available option."
     internal = cm.Settings(source=f"graphs/{batch}/settings.json")
     if not internal.load():
         return f"graphs/{batch} dir does not exist or was corrupted, generate data first."
     os.mkdir((name := check_name("data/batch")))
+
+    # Traversal and  sorting
     if type == "all" or type == "directed":
         if not internal['d']:
             return "directed graphs are not present in this data batch"
-        bar = cm.Bar(internal["d_number"] * 12, 0, "Directed")
+        bar = cm.Bar(internal["number"] * 12, 0, "Directed")
         bar.show()
         traversal_dfs_matrix = []
         traversal_dfs_table = []
@@ -782,51 +780,51 @@ def process_data(batch: str, type: str) -> str:
         sort_bfs_matrix = []
         sort_bfs_table = []
         sort_bfs_list = []
-        for size in range(general["d_start"], general["d_start"] + general["d_number"] * general["d_step"], \
-                          general["d_step"]):
-            #matrix
+        for size in range(general["start"], general["start"] + general["number"] * general["step"], \
+                          general["step"]):
+            # matrix
             data = cm.pklread(f"graphs/{batch}/matrix-{size}.pkl")
             traversal_dfs_matrix.append(timeit.timeit(stmt=pass_data(dfs_matrix, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             traversal_bfs_matrix.append(timeit.timeit(stmt=pass_data(bfs_matrix, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             sort_dfs_matrix.append(timeit.timeit(stmt=dfs_sort_decorator(dfs_matrix, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             sort_bfs_matrix.append(timeit.timeit(stmt=pass_data(bfs_matrix_sort, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
 
-            #table
+            # table
             data = cm.pklread(f"graphs/{batch}/table-{size}.pkl")
             traversal_dfs_table.append(timeit.timeit(stmt=pass_data(dfs_table, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             traversal_bfs_table.append(timeit.timeit(stmt=pass_data(bfs_table, data), \
-                                                     number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                     number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             sort_dfs_table.append(timeit.timeit(stmt=dfs_sort_decorator(dfs_table, data), \
-                                                     number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                     number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             sort_bfs_table.append(timeit.timeit(stmt=pass_data(bfs_table_sort, data), \
-                                                     number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                     number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
 
-            #lists
+            # lists
             data = cm.pklread(f"graphs/{batch}/lists-{size}.pkl")
             traversal_dfs_list.append(timeit.timeit(stmt=pass_data(dfs_list, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             traversal_bfs_list.append(timeit.timeit(stmt=pass_data(bfs_list, data), \
-                                                      number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                      number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             sort_dfs_list.append(timeit.timeit(stmt=dfs_sort_decorator(dfs_list, data), \
-                                                    number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                    number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
             sort_bfs_list.append(timeit.timeit(stmt=pass_data(bfs_list_sort, data), \
-                                                    number=internal["d_repetitions"]) / internal["d_repetitions"])
+                                                    number=internal["repetitions"]) / internal["repetitions"])
             bar.next()
         bar.end()
         del bar
@@ -844,130 +842,205 @@ def process_data(batch: str, type: str) -> str:
         numpy.savetxt(f"{name}/sort_bfs_list.csv", numpy.asarray(sort_bfs_list))
     else:
         internal.change('d', False)
-    if type == "all" or type == "undirected_cycles":
+
+    # Hamilton with cycles
+    if type == "all" or type == "hamilton_cycles":
         if not internal["uc"]:
             return "undirected graphs with cycles are not present in this data batch"
-        bar = cm.Bar(internal["u_number"] * 4, 0, "Undirected_cycles")
+        bar = cm.Bar(internal["number"] * 2, 0, "Hamilton_cycles")
         hamilton30_cycles = []
         hamilton70_cycles = []
-        euler30_cycles = []
-        euler70_cycles = []
         bar.show()
-        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"], \
-                          general["u_step"]):
-            source = f"graphs/{batch}/cycles(30%)-{size}.pkl"
-            hamilton30_cycles.append(timeit.timeit(stmt=pass_source(hamilton, source), \
-                                                 number=general["u_repetitions"]) / general["u_repetitions"])
+        for size in range(general["start"], general["start"] + general["number"] * general["step"], \
+                          general["step"]):
+            data = cm.pklread(f"graphs/{batch}/cycles(30%)-{size}.pkl")
+            hamilton30_cycles.append(timeit.timeit(stmt=pass_source(hamilton, data), \
+                                                 number=general["repetitions"]) / general["repetitions"])
             bar.next()
-            euler30_cycles.append(timeit.timeit(stmt=pass_source(euler, source), \
-                                                   number=general["u_repetitions"]) / general["u_repetitions"])
-            bar.next()
-            source = f"graphs/{batch}/cycles(70%)-{size}.pkl"
-            hamilton70_cycles.append(timeit.timeit(stmt=pass_source(hamilton, source), \
-                                                   number=general["u_repetitions"]) / general["u_repetitions"])
-            bar.next()
-            euler70_cycles.append(timeit.timeit(stmt=pass_source(euler, source), \
-                                                number=general["u_repetitions"]) / general["u_repetitions"])
+            data = cm.pklread(f"graphs/{batch}/cycles(70%)-{size}.pkl")
+            hamilton70_cycles.append(timeit.timeit(stmt=pass_source(hamilton, data), \
+                                                   number=general["repetitions"]) / general["repetitions"])
             bar.next()
         bar.end()
         del bar
         numpy.savetxt(f"{name}/hamilton(30%).csv", numpy.asarray(hamilton30_cycles))
         numpy.savetxt(f"{name}/hamilton(70%).csv", numpy.asarray(hamilton70_cycles))
-        numpy.savetxt(f"{name}/euler(30%).csv", numpy.asarray(euler30_cycles))
-        numpy.savetxt(f"{name}/euler(70%).csv", numpy.asarray(euler70_cycles))
+        internal.new("hc", True, "Hamilton_cycles")
     else:
-        internal.change("uc", False)
-    if type == "all" or type == "undirected_nocycles":
-        if not internal["unc"]:
-            return "undirected graphs without cycles are not present in this data batch"
-        bar = cm.Bar(internal["u_number"], 0, "Undirected_nocycles")
-        hamilton50_nocycles = []
+        internal.new("hc", False, "Hamilton_cycles")
+
+    # Euler
+    if type == "all" or type == "euler":
+        if not internal["uc"]:
+            return "undirected graphs with cycles are not present in this data batch"
+        bar = cm.Bar(internal["number"] * 2, 0, "Euler")
+        euler30_cycles = []
+        euler70_cycles = []
         bar.show()
-        for size in range(general["u_start"], general["u_start"] + general["u_number"] * general["u_step"], \
-                          general["u_step"]):
-            source = f"graphs/{batch}/nocycles-{size}.pkl"
-            hamilton50_nocycles.append(timeit.timeit(stmt=pass_source(hamilton, source), \
-                                                 number=general["u_repetitions"]) / general["u_repetitions"])
+        for size in range(general["start"], general["start"] + general["number"] * general["step"], \
+                          general["step"]):
+            data = cm.pklread(f"graphs/{batch}/cycles(30%)-{size}.pkl")
+            euler30_cycles.append(timeit.timeit(stmt=pass_source(euler, data), \
+                                                number=general["repetitions"]) / general["repetitions"])
+            bar.next()
+            data = cm.pklread(f"graphs/{batch}/cycles(70%)-{size}.pkl")
+            euler70_cycles.append(timeit.timeit(stmt=pass_source(euler, data), \
+                                                number=general["repetitions"]) / general["repetitions"])
             bar.next()
         bar.end()
         del bar
-        numpy.savetxt(f"{name}/hamilton(50%).csv", numpy.asarray(hamilton50_nocycles))
+        numpy.savetxt(f"{name}/euler(30%).csv", numpy.asarray(euler30_cycles))
+        numpy.savetxt(f"{name}/euler(70%).csv", numpy.asarray(euler70_cycles))
+        internal.new("e", True, "Euler")
     else:
-        internal.change("unc", False)
+        internal.new("e", False, "Euler")
+
+    # Hamilton without cycles
+    if type == "all" or type == "hamilton_no_cycles":
+        if not internal["unc"]:
+            return "undirected graphs without cycles are not present in this data batch"
+        bar = cm.Bar(internal["number"], 0, "Undirected_no_cycles")
+        hamilton50_no_cycles = []
+        bar.show()
+        for size in range(general["start"], general["start"] + general["number"] * general["step"], \
+                          general["step"]):
+            data = cm.pklread(f"graphs/{batch}/no_cycles-{size}.pkl")
+            hamilton50_no_cycles.append(timeit.timeit(stmt=pass_source(hamilton, data), \
+                                                 number=general["repetitions"]) / general["repetitions"])
+            bar.next()
+        bar.end()
+        del bar
+        numpy.savetxt(f"{name}/hamilton(50%).csv", numpy.asarray(hamilton50_no_cycles))
+        internal.new("hnc", True, "Hamilton_no_cycles")
+    else:
+        internal.new("hnc", False, "Hamilton_no_cycles")
     internal.save(target=f"{name}/settings.json")
     return "Data processed successfully"
 
 
 @cm.add_to_switch(switch=handler.commands)
 @cm.correctness
-def plot_data(batch: str):
+def plot_data(batch: str) -> str:
+    """
+    Plots a chosen data batch
+    :param batch: example batch1
+    :return:
+    """
     internal = cm.Settings(source=f"data/{batch}/settings.json")
     if not internal.load():
         return f"data/{batch} dir does not exist or was corrupted, generate data first."
     os.mkdir((name := check_name("figures/batch")))
+
+    # Traversal and sorting
     if internal['d']:
-        x = numpy.arange(internal["d_start"], internal["d_start"] + internal["d_number"] * internal["d_step"], \
-                          internal["d_step"])
-        for addon in ["linear", "log"]:
-            plt.yscale(addon)
-            plt.plot([0], marker='None', linestyle='None', label='DFS')
-            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_matrix.csv")
-            plt.plot(x, y, marker='o', label="adjacency matrix")
-            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_table.csv")
-            plt.plot(x, y, marker='o', label="adjacency list")
-            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_list.csv")
-            plt.plot(x, y, marker='o', label="list of edges")
-            plt.plot([0], marker='None', linestyle='None', label='BFS')
-            y = numpy.loadtxt(f"data/{batch}/traversal_bfs_matrix.csv")
-            plt.plot(x, y, marker='o', label="adjacency matrix")
-            y = numpy.loadtxt(f"data/{batch}/traversal_bfs_table.csv")
-            plt.plot(x, y, marker='o', label="adjacency list")
-            y = numpy.loadtxt(f"data/{batch}/traversal_dfs_list.csv")
-            plt.plot(x, y, marker='o', label="list of edges")
-            plt.title("Graph traversal")
-            plt.legend()
-            plt.xlabel("Number of vertices in the graph")
-            plt.ylabel("Time [s]")
-            plt.grid(True)
-            plt.savefig(f"{name}/traversal-{addon}.png")
-            plt.clf()
-            plt.yscale(addon)
-            plt.plot([0], marker='None', linestyle='None', label='DFS')
-            y = numpy.loadtxt(f"data/{batch}/sort_dfs_matrix.csv")
-            plt.plot(x, y, marker='o', label="adjacency matrix")
-            y = numpy.loadtxt(f"data/{batch}/sort_dfs_table.csv")
-            plt.plot(x, y, marker='o', label="adjacency list")
-            y = numpy.loadtxt(f"data/{batch}/sort_dfs_list.csv")
-            plt.plot(x, y, marker='o', label="list of edges")
-            plt.plot([0], marker='None', linestyle='None', label='BFS')
-            y = numpy.loadtxt(f"data/{batch}/sort_bfs_matrix.csv")
-            plt.plot(x, y, marker='o', label="adjacency matrix")
-            y = numpy.loadtxt(f"data/{batch}/sort_bfs_table.csv")
-            plt.plot(x, y, marker='o', label="adjacency list")
-            y = numpy.loadtxt(f"data/{batch}/sort_dfs_list.csv")
-            plt.plot(x, y, marker='o', label="list of edges")
-            plt.title("Topological sort")
-            plt.legend()
-            plt.xlabel("Number of vertices in the graph")
-            plt.ylabel("Time [s]")
-            plt.grid(True)
-            plt.savefig(f"{name}/sort-{addon}.png")
-            plt.clf()
+        x = numpy.arange(internal["start"], internal["start"] + internal["number"] * internal["step"], \
+                          internal["step"])
+        plt.plot([0], marker='None', linestyle='None', label='DFS')
+        y = numpy.loadtxt(f"data/{batch}/traversal_dfs_matrix.csv")
+        plt.plot(x, y, marker='o', label="adjacency matrix")
+        y = numpy.loadtxt(f"data/{batch}/traversal_dfs_table.csv")
+        plt.plot(x, y, marker='o', label="adjacency list")
+        y = numpy.loadtxt(f"data/{batch}/traversal_dfs_list.csv")
+        plt.plot(x, y, marker='o', label="list of edges")
+        plt.plot([0], marker='None', linestyle='None', label='BFS')
+        y = numpy.loadtxt(f"data/{batch}/traversal_bfs_matrix.csv")
+        plt.plot(x, y, marker='o', label="adjacency matrix")
+        y = numpy.loadtxt(f"data/{batch}/traversal_bfs_table.csv")
+        plt.plot(x, y, marker='o', label="adjacency list")
+        y = numpy.loadtxt(f"data/{batch}/traversal_dfs_list.csv")
+        plt.plot(x, y, marker='o', label="list of edges")
+        plt.title("Graph traversal")
+        plt.legend()
+        plt.xlabel("Number of vertices in the graph")
+        plt.ylabel("Time [s]")
+        plt.grid(True)
+        for add_on in ["linear", "log"]:
+            plt.yscale(add_on)
+            plt.savefig(f"{name}/traversal-{add_on}.png")
+        plt.clf()
+        plt.plot([0], marker='None', linestyle='None', label='DFS')
+        y = numpy.loadtxt(f"data/{batch}/sort_dfs_matrix.csv")
+        plt.plot(x, y, marker='o', label="adjacency matrix")
+        y = numpy.loadtxt(f"data/{batch}/sort_dfs_table.csv")
+        plt.plot(x, y, marker='o', label="adjacency list")
+        y = numpy.loadtxt(f"data/{batch}/sort_dfs_list.csv")
+        plt.plot(x, y, marker='o', label="list of edges")
+        plt.plot([0], marker='None', linestyle='None', label='BFS')
+        y = numpy.loadtxt(f"data/{batch}/sort_bfs_matrix.csv")
+        plt.plot(x, y, marker='o', label="adjacency matrix")
+        y = numpy.loadtxt(f"data/{batch}/sort_bfs_table.csv")
+        plt.plot(x, y, marker='o', label="adjacency list")
+        y = numpy.loadtxt(f"data/{batch}/sort_dfs_list.csv")
+        plt.plot(x, y, marker='o', label="list of edges")
+        plt.title("Topological sort")
+        plt.legend()
+        plt.xlabel("Number of vertices in the graph")
+        plt.ylabel("Time [s]")
+        plt.grid(True)
+        for add_on in ["linear", "log"]:
+            plt.yscale(add_on)
+            plt.savefig(f"{name}/sort-{add_on}.png")
+        plt.clf()
+
+    # Hamilton with cycles
+    if internal["hc"]:
+        x = numpy.arange(internal["start"], internal["start"] + internal["number"] * internal["step"], \
+                         internal["step"])
+        y = numpy.loadtxt(f"data/{batch}/hamilton(30%).csv")
+        plt.plot(x, y, marker='o', label="30% graph density")
+        y = numpy.loadtxt(f"data/{batch}/hamilton(70%).csv")
+        plt.plot(x, y, marker='o', label="70% graph density")
+        plt.title("Finding Hamilton's cycle")
+        plt.legend()
+        plt.xlabel("Number of vertices in the graph")
+        plt.ylabel("Time [s]")
+        plt.grid(True)
+        for add_on in ["linear", "log"]:
+            plt.yscale(add_on)
+            plt.savefig(f"{name}/true-hamilton-{add_on}.png")
+
+    # Euler
+    if internal["e"]:
+        x = numpy.arange(internal["start"], internal["start"] + internal["number"] * internal["step"], \
+                         internal["step"])
+        y = numpy.loadtxt(f"data/{batch}/euler(30%).csv")
+        plt.plot(x, y, marker='o', label="30% graph density")
+        y = numpy.loadtxt(f"data/{batch}/euler(70%).csv")
+        plt.plot(x, y, marker='o', label="70% graph density")
+        plt.title("Finding Euler's cycle")
+        plt.legend()
+        plt.xlabel("Number of vertices in the graph")
+        plt.ylabel("Time [s]")
+        plt.grid(True)
+        for add_on in ["linear", "log"]:
+            plt.yscale(add_on)
+            plt.savefig(f"{name}/euler-{add_on}.png")
+        plt.clf()
+
+    # Hamilton without cycles
+    if internal["hnc"]:
+        x = numpy.arange(internal["start"], internal["start"] + internal["number"] * internal["step"], \
+                         internal["step"])
+        y = numpy.loadtxt(f"data/{batch}/hamilton(50%).csv")
+        plt.plot(x, y, marker='o')
+        plt.title("Finding Hamilton's cycle, graph density - 50%")
+        plt.xlabel("Number of vertices in the graph")
+        plt.ylabel("Time [s]")
+        plt.grid(True)
+        for add_on in ["linear", "log"]:
+            plt.yscale(add_on)
+            plt.savefig(f"{name}/false-hamilton-{add_on}.png")
+        plt.clf()
     return "Data plotted successfully"
 
 
 if __name__ == "__main__":
     if not general.load():
-        general.new("d_number", 10, "Directed graphs - number of tests")
-        general.new("d_start", 20, "Directed graphs - the lenght of the shortest test case")
-        general.new("d_step", 1, "Directed graphs - the difference between test cases")
-        general.new("d_repetitions", 10, \
-                    "Directed graphs - number of times one test will be redone in order to eliminate other factors")
-        general.new("u_number", 10, "Undirected graphs - number of tests")
-        general.new("u_start", 20, "Undirected graphs - the lenght of the shortest test case")
-        general.new("u_step", 1, "Undirected graphs - the difference between test cases")
-        general.new("u_repetitions", 10, \
-                    "Undirected graphs - number of times one test will be redone in order to eliminate other factors")
+        general.new("number", 10, "Number of tests")
+        general.new("start", 20, "Lenght of the shortest test case")
+        general.new("step", 1, "Difference between test cases")
+        general.new("repetitions", 10, \
+                    "Number of times one test will be redone in order to eliminate other factors")
         general.save()
     if not os.path.isdir("graphs"):
         os.mkdir("graphs")

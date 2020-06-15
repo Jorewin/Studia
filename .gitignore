@@ -131,3 +131,5 @@ dmypy.json
 *.pkl
 *.json
 *.txt
+*.png
+*.csv
