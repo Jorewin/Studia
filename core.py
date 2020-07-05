@@ -261,7 +261,7 @@ def pass_data(func, data, volume):
 
 
 def average(step: list):
-    if len(step) >= 3:
+    if len(step) >= 5:
         step.remove(max(step))
         step.remove(min(step))
         step.remove(max(step))
