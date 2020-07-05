@@ -404,4 +404,5 @@ if __name__ == "__main__":
         cm.external.save()
     if not os.path.isdir("results"):
         os.mkdir("results")
+    print("\"Thief\" knapsack problem solver, by Jakub Błażejowski")
     cm.main()
