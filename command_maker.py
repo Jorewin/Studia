@@ -344,9 +344,9 @@ def c_settings() -> str:
     Shows current settings
     :return:
     """
-    result = "Current settings:\n"
+    result = "Current settings:"
     for tag in sorted(external.tags):
-        result += f"{tag:20}: {external[tag]:10} -> {external.desc(tag)}\n"
+        result += f"\n{tag:20}: {external[tag]:10} -> {external.desc(tag)}"
     return result
 
 
