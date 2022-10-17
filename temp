@@ -1,0 +1,11 @@
+Console.Clear();
+
+System.DateTime endDate = System.DateTime.Parse("2022-10-13T18:20:00");
+
+while (true)
+{
+    Console.SetCursorPosition(Console.WindowWidth - 8, 0);
+    Console.WriteLine($"{(endDate - System.DateTime.Now):hh':'mm':'ss}");
+    System.Threading.Thread.Sleep(1000);
+}
+
