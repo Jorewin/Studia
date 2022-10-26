@@ -41,4 +41,19 @@
     - 2
     - NO
 
-**TODO: everything else**
+27.
+    - 0
+    - 0 MB
+    - 0
+29.
+    - AvgSizeStations
+    - default
+    - SUCCEEDED
+    - 1
+    - 3
+30.
+    - 5,437
+    - 121
+    - 986,321
+32.
+    - 2
