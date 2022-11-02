@@ -3,7 +3,14 @@
     Surname = "Rafał",
     BirthYear = 1923,
 };
-((IPrintable)officeWorker).Print();
+officeWorker.Print();
+
+Manager manager = new Manager("Manager", "Firmy", 1982);
+manager.Print();
+
+Supervisor supervisor = new Supervisor("Supervisor", "Firmy", 1974);
+supervisor.Print();
+((IPrintable)supervisor).Print();
 
 interface IPrintable
 {
@@ -46,20 +53,24 @@ public abstract class Worker: IPrintable
         this.Surname = surname;
         this.BirthYear = birthYear;
     }
+
+    public void Print()
+    {
+        Console.WriteLine("Worker prints");
+    }
 }
 
 public sealed class OfficeWorker: Worker
 {
     public OfficeWorker(string name, string surname, int birthYear): base(name, surname, birthYear) {}
 
-    public void Print()
+    public new void Print()
     {
-//        ((IPrintable)this).Print();
         Console.WriteLine("OfficeWorker prints");
     }
 }
 
-public class Manager: Worker
+public class Manager: Worker, IPrintable
 {
     public Manager(string name, string surname, int birthYear): base(name, surname, birthYear) {}
 
@@ -67,14 +78,34 @@ public class Manager: Worker
     {
         return $"Manager(name: {this.Name}, surname: {this.Surname}, id: {this.Id}, birthyear: {this.BirthYear}";
     }
+
+    void IPrintable.Print()
+    {
+        Console.WriteLine("IPrintable Manager prints");
+    }
+
+    public new void Print()
+    {
+        Console.WriteLine("Manager prints");
+    }
 }
 
-public class Supervisor: Manager
+public class Supervisor: Manager, IPrintable
 {
     public Supervisor(string name, string surname, int birthYear): base(name, surname, birthYear) {}
 
     public override string ToString()
     {
         return $"Supervisor(name: {this.Name}, surname: {this.Surname}, id: {this.Id}, birthyear: {this.BirthYear}";
+    }
+
+    void IPrintable.Print()
+    {
+        Console.WriteLine("IPrintable Supervisor prints");
+    }
+
+    public new void Print()
+    {
+        Console.WriteLine("Supervisor prints");
     }
 }
