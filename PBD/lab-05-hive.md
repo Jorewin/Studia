@@ -43,3 +43,46 @@ Beeline version 3.1.2 by Apache Hive
     - NIE
     - NIE
     - org.apache.hadoop.hive.ql.io.orc.OrcSerde
+
+21.
+
+name,ibu
+Bitter Bitch Imperial IPA,138.0
+Troopers Alley IPA,135.0
+Dead-Eye DIPA,130.0
+
+22.
+
+0.05977342423329049
+
+23.
+
+style,abv
+English Barleywine,0.1076666663090388
+Quadrupel (Quad),0.10400000214576721
+American Barleywine,0.0989999994635582
+American Malt Liquor,0.0989999994635582
+
+24.
+
+name,abv,city
+Lee Hill Series Vol. 5 - Belgian Style Quadrupel Ale,0.128,Boulder
+
+25.
+
+_c0,name
+138.0,Oregon
+135.0,Virginia
+130.0,Massachusetts
+
+26.
+
+beer_density,name
+55.75426301769013,Colorado
+
+27.
+
+    - states_orc
+    - 3
+    - 2
+    - LIMIT, SELECT, GROUP BY
