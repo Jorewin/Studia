@@ -1,9 +1,10 @@
 from collections.abc import Iterator
 
 
-def reader() -> Iterator[str]:
+def reader(skip_header: bool) -> Iterator[str]:
     try:
-        input()
+        if skip_header:
+            input()
 
         while True:
             yield input().strip()
