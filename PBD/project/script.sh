@@ -1,12 +1,3 @@
-# mapred streamin
-mapred streaming \
-    -files reader.py mapper.py reducer.py
-    -input $INPUT_DIR \
-    -output $OUTPUT_DIR \
-    -mapper mapper.py \
-    -combiner reducer.py \
-    -reducer reducer.py \
-
 # hive
 CREATE EXTERNAL TABLE IF NOT EXISTS mapred_ext(
     tconst STRING,

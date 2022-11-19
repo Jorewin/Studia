@@ -1,0 +1,30 @@
+# copy files
+B=gs://pbd2022l6jb
+hadoop fs -copyToLocal $B/projekt1 ./
+hadoop fs -copyToLocal $B/projekt1-src ./
+chmod 744 mapper.py reducer.py
+hadoop fs -mkdir -p .
+hadoop fs -copyFromLocal ./projekt1 ./
+
+# mapred test
+head projekt1/input/datasource1/title.principals.tsv -n 30 | python mapper.py | sort | python reducer.py
+
+# mapred init
+U=/user/blazejowski_j
+INPUT_DIR1=projekt1/input/datasource1
+OUTPUT_DIR2=projekt1/output
+
+# mapred
+mapred streaming \
+-files mapper.py,reducer.py \
+-input $INPUT_DIR1/title.principals.tsv \
+-output $OUTPUT_DIR2 \
+-mapper mapper.py \
+-combiner reducer.py \
+-reducer reducer.py
+
+# mapred result test
+hadoop fs -getmerge $OUTPUT_DIR2 basic.tsv
+
+# mapred cleanup
+hadoop fs -rm -r $OUTPUT_DIR2
