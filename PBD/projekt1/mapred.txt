@@ -1,30 +1,56 @@
+# init
+B=pbd2022l6jb
+U=blazejowski_j
+
 # copy files
-B=gs://pbd2022l6jb
-hadoop fs -copyToLocal $B/projekt1 ./
-hadoop fs -copyToLocal $B/projekt1-src ./
-chmod 744 mapper.py reducer.py
+BP=gs://pbd2022l6jb
+hadoop fs -copyToLocal $BP/projekt1 ./
+hadoop fs -copyToLocal $BP/projekt1-src ./
+chmod +x ./projekt1-src/*
 hadoop fs -mkdir -p .
 hadoop fs -copyFromLocal ./projekt1 ./
 
-# mapred test
-head projekt1/input/datasource1/title.principals.tsv -n 30 | python mapper.py | sort | python reducer.py
+# mapred local test
+head ./projekt1/input/datasource1/title.principals.tsv -n 30 | python ./projekt1-src/mapper.py | sort | python ./projekt1-src/reducer.py
 
 # mapred init
-U=/user/blazejowski_j
-INPUT_DIR1=projekt1/input/datasource1
-OUTPUT_DIR2=projekt1/output
+INPUT_DIR1=/user/$U/projekt1/input/datasource1
+OUTPUT_DIR2=/user/$U/projekt1/output/mapred
+
+# mapred test
+mapred streaming \
+-files ./projekt1-src \
+-input $INPUT_DIR1/title.principals.tsv \
+-output $OUTPUT_DIR2 \
+-mapper ./projekt1-src/mapper.py \
+-combiner ./projekt1-src/reducer.py \
+-reducer ./projekt1-src/reducer.py
+
+hadoop fs -getmerge $OUTPUT_DIR2 ./basic.tsv
 
 # mapred
 mapred streaming \
--files mapper.py,reducer.py \
+-files ./projekt1-src \
 -input $INPUT_DIR1/title.principals.tsv \
 -output $OUTPUT_DIR2 \
--mapper mapper.py \
--combiner reducer.py \
--reducer reducer.py
-
-# mapred result test
-hadoop fs -getmerge $OUTPUT_DIR2 basic.tsv
+-outputformat org.apache.hadoop.mapred.SequenceFileOutputFormat \
+-mapper ./projekt1-src/mapper.py \
+-combiner ./projekt1-src/reducer.py \
+-reducer ./projekt1-src/reducer.py
 
 # mapred cleanup
 hadoop fs -rm -r $OUTPUT_DIR2
+
+# hive init
+INPUT_DIR3=$OUTPUT_DIR2
+INPUT_DIR4=/user/$U/projekt1/input/datasource4
+OUTPUT_DIR6=/user/$U/projekt1/output/hive
+
+# hive
+beeline \
+-n $U \
+-u jdbc:hive2://localhost:10000/default \
+--hivevar input_dir3=$INPUT_DIR3 \
+--hivevar input_dir4=$INPUT_DIR4 \
+--hivevar output_dir6=$OUTPUT_DIR6 \
+-f ./projekt-src/hive.sql

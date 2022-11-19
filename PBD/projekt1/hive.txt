@@ -1,25 +1,15 @@
-# hive
+-- mapred
 CREATE EXTERNAL TABLE IF NOT EXISTS mapred_ext(
     tconst STRING,
     actors INT
 )
-    COMMENT 'mapred results'
-    ROW FORMAT DELIMITED
-    FIELDS TERMINATED BY '\t'
-    STORED AS TEXTFILE
-    location '/user/${USER}/mapred';
+COMMENT 'mapred results'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+STORED AS SEQUENCEFILE
+LOCATION '${hivevar:input_dir3}';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS mapred_orc(
-    tconst STRING,
-    actors INT
-)
-    COMMENT 'mapred results'
-    STORED AS ORC
-    location '/user/${USER}/mapred';
-
-INSERT OVERWRITE TABLE mapred_orc
-SELECT * FROM mapred_ext;
-
+-- basics
 CREATE EXTERNAL TABLE IF NOT EXISTS basics_ext(
     tconst STRING,
     titleType STRING,
@@ -31,39 +21,47 @@ CREATE EXTERNAL TABLE IF NOT EXISTS basics_ext(
     runtimeMinutes INT,
     genres ARRAY<STRING>
 )
-    COMMENT 'movies informations'
-    ROW FORMAT DELIMITED
-    FIELDS TERMINATED BY '\t'
-    COLLECTION ITEMS TERMINATED BY ','
-    NULL DEFINED AS '\\N'
-    STORED AS TEXTFILE
-    location '/user/${USER}/basics';
+COMMENT 'movies informations'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+COLLECTION ITEMS TERMINATED BY ','
+NULL DEFINED AS '\\N'
+STORED AS TEXTFILE
+location '${hivevar:input_dir4}';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS basics_orc(
-    tconst STRING,
-    genre STRING
+-- execution
+ADD JAR /usr/lib/hive/lib/hive-hcatalog-core.jar;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS results_ext(
+    genre STRING,
+    movies INT,
+    actors INT
 )
-    COMMENT 'movies informations'
-    STORED AS ORC
-    location '/user/${USER}/basics';
+COMMENT 'project no. 1 results'
+ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe'
+STORED AS TEXTFILE
+LOCATION '${hivevar:output_dir5}';
 
-INSERT OVERWRITE TABLE basics_orc
-SELECT tconst, genre
-FROM basics_ext
-LATERAL VIEW
-EXPLODE(genres) AS genre;
-
-WITH source AS (
-    SELECT
-        b.genre,
-        b.tconst
-        COALESCE(m.actors, 0) AS actors
-    FROM basics_orc b LEFT OUTER JOIN mapred_orc m ON b.tconst = m.tconst
-)
+INSERT INTO results_ext
+WITH
+    basics AS (
+        SELECT
+            genre,
+            tconst
+        FROM basics_ext
+        LATERAL VIEW EXPLODE(genres) genres_exploded AS genre
+    ),
+    source AS (
+        SELECT
+            b.genre,
+            b.tconst
+            COALESCE(m.actors, 0) AS actors
+        FROM basics b LEFT OUTER JOIN mapred_ext m ON b.tconst = m.tconst
+    )
 SELECT
     genre,
     COUNT(tconst) AS movies,
-    SUM(actors)
+    SUM(actors) AS actors
 FROM source
 GROUP BY genre
 ORDER BY SUM(actors) DESC
