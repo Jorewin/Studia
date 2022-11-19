@@ -1,22 +1,19 @@
-from collections.abc import Generator
+from typing import Generator, Tuple
 from reader import reader
 
 
-def reducer(tconst: str) -> Generator[tuple[str, int], int, None]:
+def reducer(tconst: str) -> Generator[Tuple[str, int], int, None]:
     actor_count_sum = 0
-    actor_count = yield (tconst, actor_count_sum)
+    actor_count = yield tconst, actor_count_sum
 
     while actor_count is not None:
         actor_count_sum += actor_count
-        actor_count = yield (tconst, actor_count_sum)
-    yield (tconst, actor_count_sum)
-
+        actor_count = yield tconst, actor_count_sum
+    yield tconst, actor_count_sum
 
 def main():
     sep='\t'
-    print("tconst", "actors", sep=sep)
-
-    data = reader(True)
+    data = reader()
 
     try:
         line = next(data)
@@ -37,7 +34,6 @@ def main():
             next(reduce)
         reduce.send(int(actor_count))
     print(*next(reduce), sep=sep)
-
 
 if __name__ == "__main__":
     main()
