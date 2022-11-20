@@ -5,7 +5,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS mapred_ext(
 )
 COMMENT 'mapred results'
 ROW FORMAT DELIMITED
-FIELDS TERMINATED BY '\t'
+FIELDS TERMINATED BY ','
 STORED AS SEQUENCEFILE
 LOCATION '${hivevar:input_dir3}';
 
@@ -40,29 +40,37 @@ CREATE EXTERNAL TABLE IF NOT EXISTS results_ext(
 COMMENT 'project no. 1 results'
 ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe'
 STORED AS TEXTFILE
-LOCATION '${hivevar:output_dir5}';
+LOCATION '${hivevar:output_dir6}';
 
-INSERT INTO results_ext
 WITH
     basics AS (
         SELECT
             genre,
             tconst
         FROM basics_ext
-        LATERAL VIEW EXPLODE(genres) genres_exploded AS genre
+        LATERAL VIEW EXPLODE(COALESCE(genres, ARRAY('Not specified'))) genres_exploded AS genre
+        WHERE
+            tconst != 'tconst' AND
+            titleType = 'movie'
     ),
     source AS (
         SELECT
             b.genre,
-            b.tconst
-            COALESCE(m.actors, 0) AS actors
+            b.tconst,
+            COALESCE(m.actors, 0) AS actors_per_movie
         FROM basics b LEFT OUTER JOIN mapred_ext m ON b.tconst = m.tconst
     )
+INSERT INTO results_ext
 SELECT
     genre,
     COUNT(tconst) AS movies,
-    SUM(actors) AS actors
+    SUM(actors_per_movie) AS actors
 FROM source
 GROUP BY genre
-ORDER BY SUM(actors) DESC
+ORDER BY actors DESC
 LIMIT 3;
+
+-- cleanup
+DROP TABLE mapred_ext;
+DROP TABLE basics_ext;
+DROP TABLE results_ext;

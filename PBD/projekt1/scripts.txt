@@ -35,7 +35,7 @@ mapred streaming \
 -output $OUTPUT_DIR2 \
 -outputformat org.apache.hadoop.mapred.SequenceFileOutputFormat \
 -mapper ./projekt1-src/mapper.py \
--combiner ./projekt1-src/reducer.py \
+-combiner ./projekt1-src/combiner.py \
 -reducer ./projekt1-src/reducer.py
 
 # mapred cleanup
@@ -53,4 +53,9 @@ beeline \
 --hivevar input_dir3=$INPUT_DIR3 \
 --hivevar input_dir4=$INPUT_DIR4 \
 --hivevar output_dir6=$OUTPUT_DIR6 \
--f ./projekt-src/hive.sql
+-f ./projekt1-src/hive.sql
+
+hadoop fs -getmerge $OUTPUT_DIR6
+
+# hive cleanup
+hadoop fs -rm -r $OUTPUT_DIR6

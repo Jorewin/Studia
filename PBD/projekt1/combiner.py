@@ -11,9 +11,9 @@ for line in sys.stdin:
     if tconst == current_tconst:
         current_actors += int(actors)
     else:
-        print("", f"{current_tconst},{current_actors}", sep='\t')
+        print(current_tconst, current_actors, sep='\t')
         current_tconst = tconst
         current_actors = int(actors)
 
 if current_tconst is not None:
-    print("", f"{current_tconst},{current_actors}", sep='\t')
+    print(current_tconst, current_actors, sep='\t')
