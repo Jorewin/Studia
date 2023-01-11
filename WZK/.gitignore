@@ -1,0 +1,6 @@
+# Python
+**/venv
+**/.ipynb_checkpoints
+
+# Wyniki
+/results
