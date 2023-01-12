@@ -17,8 +17,9 @@ object DimensionDate {
       .option("inferSchema", value = true)
       .load(filepath))
 
-    londonCrimes
-      .select($"year", $"month")
-      .show()
+    val dates = (londonCrimes
+      .select($"year", $"month"))
+
+    dates.show()
   }
 }

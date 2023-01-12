@@ -15,12 +15,16 @@ object DimensionCategory {
       .format("org.apache.spark.csv")
       .option("header", value = true)
       .option("inferSchema", value = true)
-      .load(filepath))
-
-    londonCrimes
+      .load(filepath)
       .withColumnRenamed("major_category", "major")
       .withColumnRenamed("minor_category", "minor")
-      .select($"major", $"minor")
-      .show()
+      .select($"major", $"minor"))
+
+    val categories = (londonCrimes
+      .withColumnRenamed("major_category", "major")
+      .withColumnRenamed("minor_category", "minor")
+      .select($"major", $"minor"))
+
+    categories.show()
   }
 }
