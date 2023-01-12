@@ -29,31 +29,41 @@ object DimensionLocation {
   }
 
   def main (args: Array[String]): Unit = {
-    // TODO: decide what should we do with null values in `quality`, `income` and `closness_to_station`
+    // TODO: decide what should we do with null values in `quality`, `income` and `closeness_to_station`
     // TODO: decide on id method generation ex. LSOA and date hash
     // Remember to delete `master` when not running locally
     val spark = SparkSession.builder.master("local").appName("DimensionLocation").getOrCreate()
     import spark.implicits._
 
-    val londonCrimesFilepath = args(0)
-    val londonPostcodesFilepath = args(1)
+    val londonCrimesFilepath1 = args(0)
+    val londonCrimesFilepath2 = args(1)
+    val londonPostcodesFilepath = args(2)
 
-    val londonCrimes = (spark
+    val londonCrimes1 = (spark
       .read
-      .format("org.apache.spark.csv")
+      .format("csv")
       .option("header", value = true)
       .option("inferSchema", value = true)
-      .load(londonCrimesFilepath))
+      .load(londonCrimesFilepath1))
+
+    val londonCrimes2 = (spark
+      .read
+      .format("csv")
+      .option("header", value = true)
+      .option("inferSchema", value = true)
+      .load(londonCrimesFilepath2))
+
+    val londonCrimes = londonCrimes1.union(londonCrimes2).dropDuplicates()
 
     val londonPostcodes = (spark
       .read
-      .format("org.apache.spark.csv")
+      .format("csv")
       .option("header", value = true)
       .option("inferSchema", value = true)
       .load(londonPostcodesFilepath))
 
-    val incomeClassifierUDF = udf(incomeClassifier)
-    val distanceClassifierUDF = udf(distanceClassifier)
+    val incomeClassifierUDF = udf(x => incomeClassifier(x))
+    val distanceClassifierUDF = udf(x => distanceClassifier(x))
 
     val londonPostcodesUniqueLsoa = (londonPostcodes
       .withColumnRenamed("LSOA Code", "lsoa_code")
@@ -62,8 +72,8 @@ object DimensionLocation {
       .withColumnRenamed("Rural/urban", "rural/urban")
       .withColumnRenamed("Water company", "water_company")
       .withColumnRenamed("Quality", "quality")
-      .withColumnRenamed("Income", "income_numerical")
-      .withColumnRenamed("Distance to station", "closness_to_station_numerical")
+      .withColumnRenamed("Average Income", "income_numerical")
+      .withColumnRenamed("Distance to station", "closeness_to_station_numerical")
       .select(
         $"lsoa_code",
         $"county",
@@ -72,20 +82,20 @@ object DimensionLocation {
         $"water_company",
         $"quality",
         $"income_numerical",
-        $"closness_to_station_numerical"
+        $"closeness_to_station_numerical"
       )
       .groupBy($"lsoa_code")
       .agg(
-        first($"county", ignoreNulls = true),
-        first($"district", ignoreNulls = true),
-        first($"rural/urban", ignoreNulls = true),
-        first($"water_company", ignoreNulls = true),
-        first($"quality", ignoreNulls = true),
-        avg($"income_numerical"),
-        avg($"closness_to_station_numerical")
+        first($"county", ignoreNulls = true).as("county"),
+        first($"district", ignoreNulls = true).as("district"),
+        first($"rural/urban", ignoreNulls = true).as("rural/urban"),
+        first($"water_company", ignoreNulls = true).as("water_company"),
+        first($"quality", ignoreNulls = true).as("quality"),
+        avg($"income_numerical").as("income_numerical"),
+        avg($"closeness_to_station_numerical").as("closeness_to_station_numerical")
       )
       .withColumn("income", incomeClassifierUDF($"income_numerical"))
-      .withColumn("closness_to_station", distanceClassifierUDF($"closness_to_station_numerical"))
+      .withColumn("closeness_to_station", distanceClassifierUDF($"closeness_to_station_numerical"))
     )
 
     val locations = (londonCrimes
@@ -99,7 +109,7 @@ object DimensionLocation {
         londonPostcodesUniqueLsoa("water_company"),
         londonPostcodesUniqueLsoa("quality"),
         londonPostcodesUniqueLsoa("income"),
-        londonPostcodesUniqueLsoa("closness_to_station")
+        londonPostcodesUniqueLsoa("closeness_to_station")
       )
     )
 
