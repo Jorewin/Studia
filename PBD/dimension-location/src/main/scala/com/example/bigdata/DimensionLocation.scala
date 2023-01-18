@@ -1,6 +1,6 @@
 package com.example.bigdata
 
-import org.apache.spark.sql._
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{avg, first, udf}
 object DimensionLocation {
 
@@ -29,15 +29,15 @@ object DimensionLocation {
   }
 
   def main (args: Array[String]): Unit = {
-    // TODO: decide what should we do with null values in `quality`, `income` and `closeness_to_station`
-    // TODO: decide on id method generation ex. LSOA and date hash
     // Remember to delete `master` when not running locally
-    val spark = SparkSession.builder.master("local").appName("DimensionLocation").getOrCreate()
+    val spark = SparkSession.builder.appName("DimensionLocation").getOrCreate()
     import spark.implicits._
 
     val londonCrimesFilepath1 = args(0)
     val londonCrimesFilepath2 = args(1)
     val londonPostcodesFilepath = args(2)
+    val incomeClassifierUDF = udf(x => incomeClassifier(x))
+    val distanceClassifierUDF = udf(x => distanceClassifier(x))
 
     val londonCrimes1 = (spark
       .read
@@ -53,7 +53,7 @@ object DimensionLocation {
       .option("inferSchema", value = true)
       .load(londonCrimesFilepath2))
 
-    val londonCrimes = londonCrimes1.union(londonCrimes2).dropDuplicates()
+    val londonCrimes = londonCrimes1.union(londonCrimes2).dropDuplicates("lsoa_code")
 
     val londonPostcodes = (spark
       .read
@@ -61,9 +61,6 @@ object DimensionLocation {
       .option("header", value = true)
       .option("inferSchema", value = true)
       .load(londonPostcodesFilepath))
-
-    val incomeClassifierUDF = udf(x => incomeClassifier(x))
-    val distanceClassifierUDF = udf(x => distanceClassifier(x))
 
     val londonPostcodesUniqueLsoa = (londonPostcodes
       .withColumnRenamed("LSOA Code", "lsoa_code")
@@ -110,9 +107,9 @@ object DimensionLocation {
         londonPostcodesUniqueLsoa("quality"),
         londonPostcodesUniqueLsoa("income"),
         londonPostcodesUniqueLsoa("closeness_to_station")
-      )
-    )
+      ))
 
-    locations.show()
+//    locations.show()
+    locations.write.mode("overwrite").format("delta").saveAsTable("location")
   }
 }
